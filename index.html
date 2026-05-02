@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarseyNeuroView - 3D Disorder Chart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-secondary: #12121a;
+            --fg: #e8e8ec;
+            --muted: #6b6b7b;
+            --accent: #ff9f43;
+            --accent-dim: #e58a3a;
+            --card: rgba(20, 20, 30, 0.8);
+            --border: rgba(255, 255, 255, 0.08);
+            --adhd: #ff6b6b;
+            --autism: #4ecdc4;
+            --ocd: #ffe66d;
+            --schizophrenia: #c44dff;
+            --anxiety: #ff9f43;
+            --depression: #5f9ea0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: linear-gradient(135deg, var(--card) 0%, rgba(10, 10, 15, 0.95) 100%);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(0);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-260px);
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, rgba(255, 159, 67, 0.2) 0%, rgba(255, 107, 107, 0.2) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(255, 159, 67, 0.3);
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .menu-section {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .menu-section::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .menu-section::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .menu-section::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .menu-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 4px 0;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .menu-item.active {
+            background: rgba(255, 159, 67, 0.15);
+            color: var(--accent);
+        }
+
+        .menu-item.active .menu-icon {
+            color: var(--accent);
+        }
+
+        .menu-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--muted);
+        }
+
+        /* Disorder Cards with Sliders */
+        .disorder-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            margin: 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .disorder-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .disorder-card.selected {
+            border-color: var(--accent);
+            background: rgba(255, 159, 67, 0.08);
+        }
+
+        .disorder-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .disorder-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .disorder-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+        }
+
+        .disorder-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .disorder-value {
+            font-size: 12px;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .disorder-sliders {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            width: 70px;
+            flex-shrink: 0;
+        }
+
+        .slider-container {
+            flex: 1;
+            position: relative;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255, 159, 67, 0.4);
+        }
+
+        input[type="range"]:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px rgba(255, 159, 67, 0.4);
+        }
+
+        .slider-value {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg);
+            width: 32px;
+            text-align: right;
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            right: -44px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 72px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(30, 30, 45, 0.9);
+        }
+
+        .sidebar-toggle svg {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        /* Title Overlay */
+        .title-overlay {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .main-title {
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .sub-title {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Axis Labels */
+        .axis-label {
+            position: fixed;
+            z-index: 50;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .axis-left {
+            left: 360px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            color: var(--accent);
+        }
+
+        .axis-right {
+            right: 80px;
+            top: 50%;
+            transform: translateY(-50%) rotate(90deg);
+            color: var(--schizophrenia);
+        }
+
+        /* Bottom Controls */
+        .bottom-controls {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            padding: 12px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .control-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--fg);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        .control-btn.primary:hover {
+            box-shadow: 0 4px 20px rgba(255, 159, 67, 0.4);
+        }
+
+        .control-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            right: 24px;
+            top: 24px;
+            width: 280px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .info-panel.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .info-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .info-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .info-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .info-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* View Mode Indicator */
+        .view-indicator {
+            position: fixed;
+            right: 24px;
+            bottom: 100px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .view-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .view-text {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--muted);
+            letter-spacing: 2px;
+        }
+
+        /* Reset All Button */
+        .reset-all-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            margin: 16px;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 10px;
+            color: #ff6b6b;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .reset-all-btn:hover {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: rgba(255, 107, 107, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 280px;
+            }
+            
+            .sidebar.collapsed {
+                transform: translateX(-240px);
+            }
+            
+            .title-overlay {
+                left: 180px;
+            }
+            
+            .axis-left {
+                left: 300px;
+            }
+            
+            .info-panel {
+                width: 220px;
+                right: 12px;
+            }
+            
+            .bottom-controls {
+                flex-wrap: wrap;
+                max-width: 90vw;
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Initializing MarseyNeuroView...</div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="https://z-cdn-media.chatglm.cn/files/d52aeacb-80bf-4b1d-baaf-5ec7f4abf636.png?auth_key=1877706540-86b1ed962f514964b50c5afcd3186cfe-0-431f5afdc5bb5856eb7a89a1c207c76e" alt="Marsey Logo">
+                </div>
+                <div>
+                    <div class="text-sm font-semibold">MarseyNeuroView</div>
+                    <div class="text-xs text-gray-500">3D Analyzer</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <div class="menu-label">View Controls</div>
+            
+            <div class="menu-item active" data-view="default">
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                <span>Overview</span>
+            </div>
+            
+            <div class="menu-item" data-view="top">
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>Top View</span>
+            </div>
+            
+            <div class="menu-item" data-view="side">
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                </svg>
+                <span>Side View</span>
+            </div>
+
+            <div class="menu-label" style="margin-top: 24px;">Adjust Disorder Bars</div>
+            
+            <div id="disorder-cards"></div>
+
+            <button class="reset-all-btn" id="resetAllBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                </svg>
+                Reset All to Default
+            </button>
+        </div>
+
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </button>
+    </aside>
+
+    <!-- Title Overlay -->
+    <div class="title-overlay">
+        <div class="main-title">3D Visualization</div>
+        <div class="sub-title">How Neurologically Deficient Are You</div>
+    </div>
+
+    <!-- Axis Labels -->
+    <div class="axis-label axis-left">
+        <span>&larr;</span> Hyperfocus
+    </div>
+    <div class="axis-label axis-right">
+        Compulsivity <span>&rarr;</span>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel" id="infoPanel">
+        <div class="info-header">
+            <div class="info-color" id="infoColor"></div>
+            <div class="info-title" id="infoTitle">Select a Disorder</div>
+        </div>
+        <div class="info-stats">
+            <div class="stat-box">
+                <div class="stat-label">Severity</div>
+                <div class="stat-value" id="infoSeverity">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Prevalence</div>
+                <div class="stat-value" id="infoPrevalence">--%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Hyperfocus</div>
+                <div class="stat-value" id="infoHyperfocus">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Compulsivity</div>
+                <div class="stat-value" id="infoCompulsivity">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Indicator -->
+    <div class="view-indicator">
+        <div class="view-dot"></div>
+        <span class="view-text mono">LIVE RENDER</span>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-controls">
+        <button class="control-btn" id="resetView">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+            </svg>
+            Reset View
+        </button>
+        <button class="control-btn" id="toggleRotation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+            </svg>
+            Auto Rotate
+        </button>
+        <button class="control-btn" id="toggleGrid">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="3" y1="15" x2="21" y2="15"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+                <line x1="15" y1="3" x2="15" y2="21"/>
+            </svg>
+            Toggle Grid
+        </button>
+        <button class="control-btn primary" id="exportPDF">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Export PDF
+        </button>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Get jsPDF from global scope
+        const { jsPDF } = window.jspdf;
+
+        // Default disorder data (for reset)
+        const defaultDisorderData = {
+            adhd: {
+                name: 'ADHD',
+                color: 0xff6b6b,
+                cssColor: '#ff6b6b',
+                severity: 72,
+                prevalence: 5.7,
+                hyperfocus: 85,
+                compulsivity: 35,
+                position: { x: -3, y: 0, z: 1 }
+            },
+            autism: {
+                name: 'Autism',
+                color: 0x4ecdc4,
+                cssColor: '#4ecdc4',
+                severity: 65,
+                prevalence: 2.3,
+                hyperfocus: 90,
+                compulsivity: 45,
+                position: { x: -1.5, y: 0, z: -2 }
+            },
+            ocd: {
+                name: 'OCD',
+                color: 0xffe66d,
+                cssColor: '#ffe66d',
+                severity: 58,
+                prevalence: 1.2,
+                hyperfocus: 55,
+                compulsivity: 92,
+                position: { x: 2.5, y: 0, z: 0 }
+            },
+            schizophrenia: {
+                name: 'Schizophrenia',
+                color: 0xc44dff,
+                cssColor: '#c44dff',
+                severity: 88,
+                prevalence: 0.7,
+                hyperfocus: 40,
+                compulsivity: 70,
+                position: { x: 1, y: 0, z: 2 }
+            },
+            anxiety: {
+                name: 'Anxiety',
+                color: 0xff9f43,
+                cssColor: '#ff9f43',
+                severity: 52,
+                prevalence: 18.1,
+                hyperfocus: 30,
+                compulsivity: 75,
+                position: { x: 3, y: 0, z: -1.5 }
+            },
+            depression: {
+                name: 'Depression',
+                color: 0x5f9ea0,
+                cssColor: '#5f9ea0',
+                severity: 68,
+                prevalence: 4.4,
+                hyperfocus: 25,
+                compulsivity: 50,
+                position: { x: -2, y: 0, z: -3 }
+            }
+        };
+
+        // Current disorder data (mutable)
+        let disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
+
+        // Initialize variables
+        let scene, camera, renderer, controls;
+        let cubes = {};
+        let labels = {};
+        let gridHelper;
+        let autoRotate = false;
+        let showGrid = true;
+        let hoveredCube = null;
+        let selectedDisorder = null;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // DOM Elements
+        const container = document.getElementById('canvas-container');
+        const loadingScreen = document.getElementById('loading');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const infoPanel = document.getElementById('infoPanel');
+        const tooltip = document.getElementById('tooltip');
+        const disorderCardsContainer = document.getElementById('disorder-cards');
+
+        // Create disorder cards with sliders
+        function createDisorderCards() {
+            disorderCardsContainer.innerHTML = '';
+            
+            Object.entries(disorderData).forEach(([key, data]) => {
+                const card = document.createElement('div');
+                card.className = 'disorder-card';
+                card.id = `card-${key}`;
+                card.innerHTML = `
+                    <div class="disorder-header">
+                        <div class="disorder-info">
+                            <div class="disorder-dot" style="background: ${data.cssColor};"></div>
+                            <span class="disorder-name">${data.name}</span>
+                        </div>
+                        <span class="disorder-value" id="severity-value-${key}">${data.severity}</span>
+                    </div>
+                    <div class="disorder-sliders">
+                        <div class="slider-row">
+                            <span class="slider-label">Severity</span>
+                            <div class="slider-container">
+                                <input type="range" min="10" max="100" value="${data.severity}" 
+                                    data-disorder="${key}" data-type="severity"
+                                    aria-label="${data.name} severity">
+                            </div>
+                            <span class="slider-value" id="severity-display-${key}">${data.severity}</span>
+                        </div>
+                        <div class="slider-row">
+                            <span class="slider-label">Hyperfocus</span>
+                            <div class="slider-container">
+                                <input type="range" min="0" max="100" value="${data.hyperfocus}" 
+                                    data-disorder="${key}" data-type="hyperfocus"
+                                    aria-label="${data.name} hyperfocus">
+                            </div>
+                            <span class="slider-value" id="hyperfocus-display-${key}">${data.hyperfocus}</span>
+                        </div>
+                        <div class="slider-row">
+                            <span class="slider-label">Compulsivity</span>
+                            <div class="slider-container">
+                                <input type="range" min="0" max="100" value="${data.compulsivity}" 
+                                    data-disorder="${key}" data-type="compulsivity"
+                                    aria-label="${data.name} compulsivity">
+                            </div>
+                            <span class="slider-value" id="compulsivity-display-${key}">${data.compulsivity}</span>
+                        </div>
+                    </div>
+                `;
+                
+                disorderCardsContainer.appendChild(card);
+            });
+
+            // Add slider event listeners
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                slider.addEventListener('input', handleSliderChange);
+            });
+        }
+
+        // Handle slider changes
+        function handleSliderChange(e) {
+            const disorderKey = e.target.dataset.disorder;
+            const type = e.target.dataset.type;
+            const value = parseInt(e.target.value);
+
+            // Update data
+            disorderData[disorderKey][type] = value;
+
+            // Update display
+            document.getElementById(`${type}-display-${disorderKey}`).textContent = value;
+            if (type === 'severity') {
+                document.getElementById(`severity-value-${disorderKey}`).textContent = value;
+            }
+
+            // Update 3D cube
+            updateCube(disorderKey);
+
+            // Update info panel if this disorder is selected
+            if (selectedDisorder === disorderKey) {
+                updateInfoPanel(disorderKey);
+            }
+        }
+
+        // Update cube based on current data
+        function updateCube(disorderKey) {
+            const data = disorderData[disorderKey];
+            const cube = cubes[disorderKey];
+            
+            if (!cube) return;
+
+            // Animate height change
+            const targetHeight = data.severity / 20;
+            
+            // Smooth animation
+            const animateHeight = () => {
+                const diff = targetHeight - cube.scale.y;
+                if (Math.abs(diff) > 0.01) {
+                    cube.scale.y += diff * 0.15;
+                    cube.position.y = cube.scale.y / 2;
+                    requestAnimationFrame(animateHeight);
+                } else {
+                    cube.scale.y = targetHeight;
+                    cube.position.y = targetHeight / 2;
+                }
+            };
+            animateHeight();
+
+            // Update position based on hyperfocus and compulsivity
+            const newX = ((data.hyperfocus - 50) / 50) * -4;
+            const newZ = ((data.compulsivity - 50) / 50) * 4;
+            
+            // Animate position
+            const animatePosition = () => {
+                const dx = newX - cube.position.x;
+                const dz = newZ - cube.position.z;
+                
+                if (Math.abs(dx) > 0.05 || Math.abs(dz) > 0.05) {
+                    cube.position.x += dx * 0.1;
+                    cube.position.z += dz * 0.1;
+                    requestAnimationFrame(animatePosition);
+                } else {
+                    cube.position.x = newX;
+                    cube.position.z = newZ;
+                }
+            };
+            animatePosition();
+
+            // Update label position
+            updateLabelPosition(disorderKey, newX, targetHeight + 0.8, newZ);
+        }
+
+        // Update label position
+        function updateLabelPosition(disorderKey, x, y, z) {
+            const label = labels[disorderKey];
+            if (label) {
+                label.position.set(x, y, z);
+            }
+        }
+
+        // Initialize Three.js scene
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0f);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(8, 6, 8);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true,
+                preserveDrawingBuffer: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 20;
+            controls.maxPolarAngle = Math.PI / 2.1;
+
+            // Lights
+            setupLights();
+
+            // Grid
+            createGrid();
+
+            // Create disorder cards first
+            createDisorderCards();
+
+            // Cubes
+            createDisorderCubes();
+
+            // Particles
+            createParticles();
+
+            // Ground plane
+            createGroundPlane();
+
+            // Event listeners
+            setupEventListeners();
+
+            // Hide loading screen
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+            }, 1500);
+
+            // Start animation
+            animate();
+        }
+
+        function setupLights() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            // Main directional light
+            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            mainLight.position.set(10, 15, 10);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 50;
+            mainLight.shadow.camera.left = -15;
+            mainLight.shadow.camera.right = 15;
+            mainLight.shadow.camera.top = 15;
+            mainLight.shadow.camera.bottom = -15;
+            scene.add(mainLight);
+
+            // Accent lights
+            const accentLight1 = new THREE.PointLight(0xff9f43, 0.5, 20);
+            accentLight1.position.set(-8, 5, -8);
+            scene.add(accentLight1);
+
+            const accentLight2 = new THREE.PointLight(0xc44dff, 0.5, 20);
+            accentLight2.position.set(8, 5, 8);
+            scene.add(accentLight2);
+        }
+
+        function createGrid() {
+            gridHelper = new THREE.GridHelper(20, 20, 0xff9f43, 0x1a1a2e);
+            gridHelper.position.y = -0.01;
+            scene.add(gridHelper);
+        }
+
+        function createDisorderCubes() {
+            const geometry = new THREE.BoxGeometry(1.2, 1, 1.2);
+
+            Object.entries(disorderData).forEach(([key, data]) => {
+                const height = data.severity / 20;
+                const posX = ((data.hyperfocus - 50) / 50) * -4;
+                const posZ = ((data.compulsivity - 50) / 50) * 4;
+                
+                // Create cube with gradient material
+                const material = new THREE.MeshStandardMaterial({
+                    color: data.color,
+                    metalness: 0.3,
+                    roughness: 0.4,
+                    emissive: data.color,
+                    emissiveIntensity: 0.1
+                });
+
+                const cube = new THREE.Mesh(geometry, material);
+                cube.scale.y = height;
+                cube.position.set(posX, height / 2, posZ);
+                cube.castShadow = true;
+                cube.receiveShadow = true;
+                cube.userData = { key, ...data };
+
+                // Create wireframe outline
+                const wireframeGeometry = new THREE.EdgesGeometry(geometry);
+                const wireframeMaterial = new THREE.LineBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+                wireframe.scale.y = height;
+                cube.add(wireframe);
+
+                scene.add(cube);
+                cubes[key] = cube;
+
+                // Create label
+                const label = createLabel(data.name, posX, height + 0.8, posZ, data.color);
+                labels[key] = label;
+            });
+        }
+
+        function createLabel(text, x, y, z, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+
+            context.fillStyle = 'transparent';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            context.font = 'bold 32px Space Grotesk, sans-serif';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            
+            // Text shadow
+            context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            context.shadowBlur = 8;
+            context.shadowOffsetX = 2;
+            context.shadowOffsetY = 2;
+            
+            // Convert hex to rgba for fill style
+            const hexColor = '#' + color.toString(16).padStart(6, '0');
+            context.fillStyle = hexColor;
+            context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true
+            });
+
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(x, y, z);
+            sprite.scale.set(2, 0.5, 1);
+            scene.add(sprite);
+            
+            return sprite;
+        }
+
+        function createParticles() {
+            const particleCount = 500;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+
+            const colorPalette = [
+                new THREE.Color(0xff9f43),
+                new THREE.Color(0xc44dff),
+                new THREE.Color(0xff6b6b),
+                new THREE.Color(0x4ecdc4),
+                new THREE.Color(0xffe66d)
+            ];
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                
+                positions[i3] = (Math.random() - 0.5) * 40;
+                positions[i3 + 1] = Math.random() * 15;
+                positions[i3 + 2] = (Math.random() - 0.5) * 40;
+
+                const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+                colors[i3] = color.r;
+                colors[i3 + 1] = color.g;
+                colors[i3 + 2] = color.b;
+
+                sizes[i] = Math.random() * 3 + 1;
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.05,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            particles.userData.isParticle = true;
+            scene.add(particles);
+        }
+
+        function createGroundPlane() {
+            const geometry = new THREE.PlaneGeometry(30, 30);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x0a0a12,
+                metalness: 0.8,
+                roughness: 0.2,
+                transparent: true,
+                opacity: 0.5
+            });
+
+            const ground = new THREE.Mesh(geometry, material);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.02;
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+
+        function updateInfoPanel(disorderKey) {
+            const data = disorderData[disorderKey];
+            if (!data) return;
+
+            document.getElementById('infoColor').style.background = data.cssColor;
+            document.getElementById('infoTitle').textContent = data.name;
+            document.getElementById('infoSeverity').textContent = data.severity;
+            document.getElementById('infoPrevalence').textContent = data.prevalence + '%';
+            document.getElementById('infoHyperfocus').textContent = data.hyperfocus;
+            document.getElementById('infoCompulsivity').textContent = data.compulsivity;
+            
+            infoPanel.classList.add('visible');
+        }
+
+        function setupEventListeners() {
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Mouse move for hover effects
+            window.addEventListener('mousemove', onMouseMove);
+
+            // Click on cubes
+            window.addEventListener('click', onCanvasClick);
+
+            // Sidebar toggle
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+            });
+
+            // Menu items
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    const view = item.dataset.view;
+                    handleViewChange(view);
+                });
+            });
+
+            // Control buttons
+            document.getElementById('resetView').addEventListener('click', resetView);
+            document.getElementById('toggleRotation').addEventListener('click', toggleAutoRotate);
+            document.getElementById('toggleGrid').addEventListener('click', toggleGridVisibility);
+            document.getElementById('exportPDF').addEventListener('click', exportToPDF);
+            document.getElementById('resetAllBtn').addEventListener('click', resetAllDisorders);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Raycasting for hover
+            raycaster.setFromCamera(mouse, camera);
+            const cubeArray = Object.values(cubes);
+            const intersects = raycaster.intersectObjects(cubeArray);
+
+            if (intersects.length > 0) {
+                const cube = intersects[0].object;
+                
+                if (hoveredCube !== cube) {
+                    if (hoveredCube) {
+                        hoveredCube.material.emissiveIntensity = 0.1;
+                    }
+                    
+                    hoveredCube = cube;
+                    cube.material.emissiveIntensity = 0.4;
+                    
+                    // Show tooltip
+                    tooltip.textContent = cube.userData.name;
+                    tooltip.classList.add('visible');
+                }
+                
+                tooltip.style.left = event.clientX + 15 + 'px';
+                tooltip.style.top = event.clientY + 15 + 'px';
+                document.body.style.cursor = 'pointer';
+            } else {
+                if (hoveredCube) {
+                    hoveredCube.material.emissiveIntensity = 0.1;
+                    hoveredCube = null;
+                }
+                tooltip.classList.remove('visible');
+                document.body.style.cursor = 'default';
+            }
+        }
+
+        function onCanvasClick(event) {
+            raycaster.setFromCamera(mouse, camera);
+            const cubeArray = Object.values(cubes);
+            const intersects = raycaster.intersectObjects(cubeArray);
+
+            if (intersects.length > 0) {
+                const cube = intersects[0].object;
+                const disorderKey = cube.userData.key;
+                
+                selectDisorder(disorderKey);
+            }
+        }
+
+        function selectDisorder(disorderKey) {
+            // Remove previous selection
+            document.querySelectorAll('.disorder-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selection to current
+            const card = document.getElementById(`card-${disorderKey}`);
+            if (card) {
+                card.classList.add('selected');
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            selectedDisorder = disorderKey;
+
+            // Update info panel
+            updateInfoPanel(disorderKey);
+
+            // Animate camera to focus on the cube
+            const cube = cubes[disorderKey];
+            if (cube) {
+                const targetPos = {
+                    x: cube.position.x + 5,
+                    y: cube.scale.y + 4,
+                    z: cube.position.z + 5
+                };
+                animateCamera(targetPos);
+
+                // Highlight effect
+                cube.material.emissiveIntensity = 0.5;
+                setTimeout(() => {
+                    cube.material.emissiveIntensity = 0.2;
+                }, 500);
+            }
+        }
+
+        function handleViewChange(view) {
+            let targetPosition;
+            
+            switch(view) {
+                case 'top':
+                    targetPosition = { x: 0, y: 12, z: 0.1 };
+                    break;
+                case 'side':
+                    targetPosition = { x: 12, y: 4, z: 0 };
+                    break;
+                default:
+                    targetPosition = { x: 8, y: 6, z: 8 };
+            }
+
+            animateCamera(targetPosition);
+        }
+
+        function animateCamera(target) {
+            const startPos = {
+                x: camera.position.x,
+                y: camera.position.y,
+                z: camera.position.z
+            };
+            
+            const duration = 1000;
+            const startTime = Date.now();
+
+            function updateCamera() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+
+                camera.position.x = startPos.x + (target.x - startPos.x) * eased;
+                camera.position.y = startPos.y + (target.y - startPos.y) * eased;
+                camera.position.z = startPos.z + (target.z - startPos.z) * eased;
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateCamera);
+                }
+            }
+
+            updateCamera();
+        }
+
+        function resetView() {
+            animateCamera({ x: 8, y: 6, z: 8 });
+            infoPanel.classList.remove('visible');
+            selectedDisorder = null;
+            document.querySelectorAll('.disorder-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            controls.autoRotate = autoRotate;
+            controls.autoRotateSpeed = 1;
+            
+            const btn = document.getElementById('toggleRotation');
+            btn.style.background = autoRotate ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+        }
+
+        function toggleGridVisibility() {
+            showGrid = !showGrid;
+            gridHelper.visible = showGrid;
+            
+            const btn = document.getElementById('toggleGrid');
+            btn.style.background = showGrid ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+        }
+
+        // PDF Export Function
+        function exportToPDF() {
+            // Render current scene
+            renderer.render(scene, camera);
+            
+            // Get canvas image
+            const imgData = renderer.domElement.toDataURL('image/png');
+            
+            // Create PDF
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            
+            // Add title
+            doc.setFontSize(24);
+            doc.setTextColor(255, 159, 67);
+            doc.text('MarseyNeuroView Report', 14, 20);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            const now = new Date();
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
+            
+            // Add screenshot
+            const imgWidth = pageWidth - 28;
+            const imgHeight = (imgWidth * 9) / 16;
+            doc.addImage(imgData, 'PNG', 14, 35, imgWidth, imgHeight);
+            
+            // Add data table
+            const tableStartY = 35 + imgHeight + 10;
+            
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.text('Disorder Analysis Data', 14, tableStartY);
+            
+            // Table header
+            let y = tableStartY + 8;
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.setFillColor(30, 30, 40);
+            doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
+            
+            doc.setTextColor(255, 159, 67);
+            doc.text('Disorder', 18, y);
+            doc.text('Severity', 55, y);
+            doc.text('Hyperfocus', 85, y);
+            doc.text('Compulsivity', 120, y);
+            doc.text('Prevalence', 155, y);
+            
+            y += 8;
+            
+            // Table rows
+            Object.entries(disorderData).forEach(([key, data]) => {
+                doc.setTextColor(200, 200, 200);
+                doc.text(data.name, 18, y);
+                doc.text(String(data.severity), 55, y);
+                doc.text(String(data.hyperfocus), 85, y);
+                doc.text(String(data.compulsivity), 120, y);
+                doc.text(data.prevalence + '%', 155, y);
+                y += 6;
+            });
+            
+            // Add footer
+            doc.setFontSize(8);
+            doc.setTextColor(80, 80, 80);
+            doc.text('MarseyNeuroView - 3D Neurological Disorder Visualization Tool', pageWidth / 2, pageHeight - 10, { align: 'center' });
+            
+            // Save PDF
+            doc.save('MarseyNeuroView-Report.pdf');
+        }
+
+        function resetAllDisorders() {
+            // Reset data
+            disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
+            
+            // Recreate cards
+            createDisorderCards();
+            
+            // Update all cubes
+            Object.keys(disorderData).forEach(key => {
+                updateCube(key);
+            });
+
+            // Clear selection
+            selectedDisorder = null;
+            infoPanel.classList.remove('visible');
+            document.querySelectorAll('.disorder-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update controls
+            controls.update();
+
+            // Animate cubes
+            const time = Date.now() * 0.001;
+            Object.entries(cubes).forEach(([key, cube], i) => {
+                // Subtle floating animation
+                const baseHeight = cube.scale.y;
+                cube.position.y = baseHeight / 2 + Math.sin(time + i) * 0.03;
+                
+                // Subtle scale pulse
+                const pulse = 1 + Math.sin(time * 2 + i * 0.5) * 0.01;
+                cube.scale.x = pulse;
+                cube.scale.z = pulse;
+            });
+
+            // Animate particles
+            scene.children.forEach(child => {
+                if (child.userData && child.userData.isParticle) {
+                    child.rotation.y += 0.0003;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
