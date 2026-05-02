@@ -28,6 +28,36 @@
             --depression: #5f9ea0;
         }
 
+        body.light-mode {
+    --bg: #f7f4ef;
+    --bg-secondary: #ffffff;
+    --fg: #1d1d24;
+    --muted: #656574;
+    --card: rgba(255, 255, 255, 0.82);
+    --border: rgba(0, 0, 0, 0.12);
+}
+
+body.light-mode .sidebar {
+    background: linear-gradient(135deg, var(--card) 0%, rgba(247, 244, 239, 0.95) 100%);
+}
+
+body.light-mode .control-btn {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .control-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .tooltip {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--fg);
+}
+
+body.light-mode .modal-overlay {
+    background: rgba(255, 255, 255, 0.72);
+}
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -507,6 +537,21 @@
                 <span>Side View</span>
             </div>
 
+            <button class="control-btn" id="toggleTheme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2"></path>
+        <path d="M12 20v2"></path>
+        <path d="M4.93 4.93l1.41 1.41"></path>
+        <path d="M17.66 17.66l1.41 1.41"></path>
+        <path d="M2 12h2"></path>
+        <path d="M20 12h2"></path>
+        <path d="M6.34 17.66l-1.41 1.41"></path>
+        <path d="M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <span id="themeLabel">Light Mode</span>
+</button>
+
             <div class="menu-label" style="margin-top: 24px;">Adjust Disorder Severity Levels</div>
             
             <div id="disorder-cards"></div>
@@ -896,6 +941,18 @@ function getRecommendation(key, severity) {
 
             setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
             animate();
+            const savedTheme = localStorage.getItem('marseyTheme');
+
+if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+
+    const themeLabel = document.getElementById('themeLabel');
+    if (themeLabel) themeLabel.textContent = 'Dark Mode';
+
+    if (scene) {
+        scene.background = new THREE.Color(0xf7f4ef);
+    }
+}
         }
 
         function setupLights() {
@@ -1080,6 +1137,19 @@ function getRecommendation(key, severity) {
             recModal.addEventListener('click', (e) => {
                 if (e.target === recModal) closeRecModal();
             });
+            const toggleThemeBtn = document.getElementById('toggleTheme');
+const themeLabel = document.getElementById('themeLabel');
+
+toggleThemeBtn.addEventListener('click', () => {
+    const isLight = document.body.classList.toggle('light-mode');
+
+    themeLabel.textContent = isLight ? 'Dark Mode' : 'Light Mode';
+    localStorage.setItem('marseyTheme', isLight ? 'light' : 'dark');
+
+    if (scene) {
+        scene.background = new THREE.Color(isLight ? 0xf7f4ef : 0x0a0a0f);
+    }
+});
         }
 
         function openRecModal() {
