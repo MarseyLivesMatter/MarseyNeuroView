@@ -1296,141 +1296,114 @@ toggleThemeBtn.addEventListener('click', () => {
         }
 
         function exportToPDF() {
-            function exportToPDF() {
-    renderer.render(scene, camera);
-    const imgData = getCompressedDataURL(renderer.domElement, 1600, 0.65);
-    const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4', compress: true });
+            renderer.render(scene, camera);
+            const imgData = getCompressedDataURL(renderer.domElement, 1920, 0.70);
+            const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4', compress: true });
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    
-    const username = usernameInput.value.trim() || 'Anonymous User';
-    const totalSeverity = parseInt(totalSeverityValueEl.textContent) || 0;
-    const now = new Date();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            
+            const username = usernameInput.value.trim() || 'Anonymous User';
+            const totalSeverity = totalSeverityValueEl.textContent;
+            
+            doc.setFontSize(24);
+            doc.setTextColor(255, 159, 67);
+            doc.text('MarseyNeuroView Report', 14, 20);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`User: ${username}`, 14, 30);
+            
+            doc.setFontSize(14);
+            doc.setTextColor(255, 159, 67);
+            doc.text(`Total Severity Score: ${totalSeverity} / 600`, 14, 38);
 
-    // Dark background
-    doc.setFillColor(26, 26, 46);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            const now = new Date();
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 150, 30);
+            
+            const imgWidth = pageWidth - 28;
+            const imgHeight = (imgWidth * 9) / 16;
+            doc.addImage(imgData, 'JPEG', 14, 45, imgWidth, imgHeight);
+            
+            doc.addPage();
+            
+            doc.setFontSize(20);
+            doc.setTextColor(255, 159, 67);
+            doc.text('Recommendations', 14, 20);
 
-    // Orange top bar
-    doc.setFillColor(255, 159, 67);
-    doc.rect(0, 0, pageWidth, 5, 'F');
+            let y = 35;
 
-    // Header (no "Compact Report")
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.text('MarseyNeuroView Report', 12, 12);
+            Object.entries(disorderData).forEach(([key, data]) => {
+                if (y > pageHeight - 40) { 
+                    doc.addPage(); 
+                    y = 20; 
+                }
 
+                const rec = getRecommendation(key, data.severity);
+                
+                doc.setFontSize(14);
+                doc.setTextColor(data.cssColor);
+                doc.text(data.name, 14, y);
+                
+                doc.setFontSize(10);
+                doc.setTextColor(80, 80, 80);
+                doc.text(`Level: ${rec.level.charAt(0).toUpperCase() + rec.level.slice(1)}`, 60, y);
+
+                y += 6;
+                
+                const splitText = doc.splitTextToSize(rec.text, pageWidth - 30);
+                doc.setTextColor(0, 0, 0);
+                doc.text(splitText, 14, y);
+                y += (splitText.length * 5) + 3;
+
+if (rec.sources && rec.sources.length) {
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`User: ${username}  •  Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 12, 18);
-
-    // Total Score box
-    doc.setFillColor(22, 33, 62);
-    doc.roundRect(pageWidth - 52, 6, 40, 14, 2, 2, 'F');
-    
-    doc.setTextColor(255, 159, 67);
-    doc.setFontSize(7);
-    doc.text('TOTAL SEVERITY', pageWidth - 32, 11, { align: 'center' });
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(15);
-    doc.text(`${totalSeverity} / 600`, pageWidth - 32, 17, { align: 'center' });
-
-    // 3D Screenshot
-    const imgW = 88;
-    const imgH = (imgW * 9) / 16;
-    doc.addImage(imgData, 'JPEG', 12, 22, imgW, imgH);
-
-    // Severity Overview
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text('Severity Overview', 105, 22);
-
-    const disorders = [
-        { key: 'adhd', name: 'ADHD', color: [255, 159, 67] },
-        { key: 'anxiety', name: 'Anxiety', color: [9, 132, 227] },
-        { key: 'depression', name: 'Depression', color: [214, 48, 49] },
-        { key: 'autism', name: 'Autism', color: [108, 92, 231] },
-        { key: 'ocd', name: 'OCD', color: [0, 184, 148] },
-        { key: 'schizophrenia', name: 'Schizophrenia', color: [225, 112, 85] }
-    ];
-
-    let y = 28;
-    disorders.forEach(d => {
-        const sev = disorderData[d.key].severity;
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(6.5);
-        doc.text(d.name, 105, y);
-        
-        doc.setFillColor(45, 45, 68);
-        doc.roundRect(128, y - 1.2, 52, 3.2, 1, 1, 'F');
-        
-        doc.setFillColor(...d.color);
-        doc.roundRect(128, y - 1.2, 52 * (sev / 100), 3.2, 1, 1, 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(5.5);
-        doc.text(`${sev}%`, 182, y);
-        y += 6;
-    });
-
-    // All Recommendations - Full text + WHITE color
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text('Recommendations (All Disorders)', 12, 73);
-
-    y = 79;
-    disorders.forEach(d => {
-        const data = disorderData[d.key];
-        const rec = getRecommendation(d.key, data.severity);
-        
-        // Disorder name (colored)
-        doc.setTextColor(...d.color);
-        doc.setFontSize(6);
-        doc.text(`${data.name} (${data.severity}%)`, 12, y);
-        
-        // Full recommendation text - WHITE
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(5.5);
-        
-        const words = rec.text.split();
-        let line = "";
-        const x = 48;
-        const maxWidth = pageWidth - 52;
-        
-        for (let word of words) {
-            const testLine = line ? line + " " + word : word;
-            if (doc.getTextWidth(testLine) < maxWidth) {
-                line = testLine;
-            } else {
-                doc.text(line, x, y);
-                y += 3.6;
-                line = word;
-            }
-        }
-        if (line) {
-            doc.text(line, x, y);
-            y += 3.6;
-        }
-        
-        y += 2.2; // space between disorders
-    });
-
-    // Footer
-    doc.setFillColor(42, 42, 58);
-    doc.rect(0, 0, pageWidth, 7, 'F');
-    
-    doc.setTextColor(255, 159, 67);
-    doc.setFontSize(5.5);
-    doc.text('EDUCATIONAL USE ONLY — Not a medical diagnosis. Consult a qualified clinician.', pageWidth / 2, 4, { align: 'center' });
-
-    doc.setTextColor(150, 150, 150);
-    doc.setFontSize(4.5);
-    doc.text('MarseyNeuroView v2.1 • Single-Page Report', pageWidth / 2, 1.5, { align: 'center' });
-
-    doc.save(`MarseyNeuroView-${username.replace(/\s+/g, '_')}-Report.pdf`);
+    doc.setTextColor(100, 100, 100);
+    const sourceText = doc.splitTextToSize(`Sources: ${rec.sources.join(", ")}`, pageWidth - 30);
+    doc.text(sourceText, 14, y);
+    y += (sourceText.length * 4) + 5;
+} else {
+    y += 8;
 }
+                
+                y += (splitText.length * 5) + 8;
+            });
+
+            doc.setFontSize(8);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Report for ${username} - MarseyNeuroView`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+            
+            doc.save(`MarseyNeuroView-${username.replace(/\s+/g, '_')}-Report.pdf`);
+        }
+
+        function resetAllDisorders() {
+            disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
+            createDisorderCards();
+            Object.keys(disorderData).forEach(key => updateCubeHeight(key));
+            updateTotalSeverity();
+            selectedDisorder = null;
+            infoPanel.classList.remove('visible');
+            document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            const time = Date.now() * 0.001;
+            Object.entries(cubes).forEach(([key, cube], i) => {
+                const baseHeight = cube.scale.y;
+                cube.position.y = baseHeight / 2 + Math.sin(time + i) * 0.03;
+                const pulse = 1 + Math.sin(time * 2 + i * 0.5) * 0.01;
+                cube.scale.x = pulse;
+                cube.scale.z = pulse;
+            });
+            scene.children.forEach(child => {
+                if (child.userData && child.userData.isParticle) child.rotation.y += 0.0003;
+            });
+            renderer.render(scene, camera);
+        }
 
 
         // ── Questionnaire ──────────────────────────────────────────
