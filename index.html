@@ -642,6 +642,23 @@ body.light-mode .modal-overlay {
         const { jsPDF } = window.jspdf;
         const MAX_TOTAL_SEVERITY = 600;
 
+        <script>
+    const OrbitControls = THREE.OrbitControls;
+
+    const { jsPDF } = window.jspdf;
+    const MAX_TOTAL_SEVERITY = 600;
+
+    function throttle(fn, delay) {
+        let last = 0;
+        return function(...args) {
+            const now = Date.now();
+            if (now - last >= delay) {
+                last = now;
+                fn.apply(this, args);
+            }
+        };
+    }
+
         // Evidence-informed recommendation content.
 // These are general educational suggestions, not diagnosis or medical advice.
 // Source basis: WebMD, NIMH, Mayo Clinic, and condition-specific clinical education resources.
@@ -840,7 +857,7 @@ function getRecommendation(key, severity) {
             });
             
             document.querySelectorAll('input[type="range"]').forEach(slider => {
-                slider.addEventListener('input', handleSliderChange);
+            slider.addEventListener('input', throttle(handleSliderChange, 100));
             });
         }
 
