@@ -1,18 +1,15 @@
-I will remove the floating text labels (sprites) above the bars to clean up the 3D view, and I will optimize the PDF export by enabling compression and using JPEG format for the screenshot to reduce file size.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarseyNeuroView - 3D Disorder Chart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -505,8 +502,8 @@ I will remove the floating text labels (sprites) above the bars to clean up the 
         .info-panel {
             position: fixed;
             right: 24px;
-            top: 130px;
-            width: 180px;
+            top: 130px; /* Moved down to accommodate total severity */
+            width: 180px; /* Same width as total panel for alignment */
             background: var(--card);
             backdrop-filter: blur(20px);
             border: 1px solid var(--border);
@@ -980,7 +977,7 @@ I will remove the floating text labels (sprites) above the bars to clean up the 
         // Initialize variables
         let scene, camera, renderer, controls;
         let cubes = {};
-        // Labels object is no longer needed for sprites, but we keep track of cubes
+        let labels = {};
         let gridHelper;
         let autoRotate = false;
         let showGrid = true;
@@ -1107,6 +1104,15 @@ I will remove the floating text labels (sprites) above the bars to clean up the 
                 }
             };
             animateHeight();
+
+            updateLabelPosition(disorderKey, targetHeight + 0.8);
+        }
+
+        function updateLabelPosition(disorderKey, y) {
+            const label = labels[disorderKey];
+            if (label) {
+                label.position.y = y;
+            }
         }
 
         function init() {
@@ -1138,6 +1144,7 @@ I will remove the floating text labels (sprites) above the bars to clean up the 
             createGroundPlane();
             setupEventListeners();
             
+            // Initial calculation
             updateTotalSeverity();
 
             setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
@@ -1206,8 +1213,38 @@ I will remove the floating text labels (sprites) above the bars to clean up the 
                 scene.add(cube);
                 cubes[key] = cube;
 
-                // Removed: createLabel call - labels are no longer added to the 3D scene
+                const label = createLabel(data.name, data.position.x, height + 0.8, data.position.z, data.color);
+                labels[key] = label;
             });
+        }
+
+        function createLabel(text, x, y, z, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+
+            context.fillStyle = 'transparent';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.font = 'bold 32px Space Grotesk, sans-serif';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            context.shadowBlur = 8;
+            context.shadowOffsetX = 2;
+            context.shadowOffsetY = 2;
+            context.fillStyle = '#' + color.toString(16).padStart(6, '0');
+            context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(x, y, z);
+            sprite.scale.set(2, 0.5, 1);
+            scene.add(sprite);
+            return sprite;
         }
 
         function createParticles() {
@@ -1382,20 +1419,36 @@ I will remove the floating text labels (sprites) above the bars to clean up the 
             document.getElementById('toggleGrid').style.background = showGrid ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
         }
 
+        // Helper to resize and compress image data
+        function getCompressedDataURL(sourceCanvas, maxWidth, quality) {
+            const aspect = sourceCanvas.height / sourceCanvas.width;
+            const width = Math.min(sourceCanvas.width, maxWidth);
+            const height = width * aspect;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            
+            const ctx = tempCanvas.getContext('2d');
+            ctx.drawImage(sourceCanvas, 0, 0, width, height);
+            
+            return tempCanvas.toDataURL('image/jpeg', quality);
+        }
+
         function exportToPDF() {
             renderer.render(scene, camera);
             
-            // Use JPEG for smaller image size
-            const imgData = renderer.domElement.toDataURL('image/jpeg', 0.75);
+            // Resize image to max 1920px width and compress as JPEG at 70% quality
+            const imgData = getCompressedDataURL(renderer.domElement, 1920, 0.70);
             
-            // Initialize with compression
+            // Initialize jsPDF with compression enabled
             const doc = new jsPDF({
                 orientation: 'l',
                 unit: 'mm',
                 format: 'a4',
                 compress: true
             });
-            
+
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             
