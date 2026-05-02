@@ -597,45 +597,112 @@
         const { jsPDF } = window.jspdf;
         const MAX_TOTAL_SEVERITY = 600;
 
-        // Recommendation Logic
-        const recData = {
-            adhd: {
-                low: "Try time-blocking techniques and minimize distractions.",
-                moderate: "Consider Cognitive Behavioral Therapy (CBT) and digital organization tools.",
-                high: "Professional assessment for medication and structured coaching is recommended."
-            },
-            autism: {
-                low: "Social scripts and clear communication can help navigate interactions.",
-                moderate: "Occupational therapy for sensory issues and routine structuring is beneficial.",
-                high: "Intensive behavioral support and specialized professional care is advised."
-            },
-            ocd: {
-                low: "Mindfulness meditation and stress reduction exercises may help.",
-                moderate: "Exposure and Response Prevention (ERP) self-help resources are recommended.",
-                high: "Professional ERP therapy and psychiatric consultation is highly recommended."
-            },
-            schizophrenia: {
-                low: "Focus on stress management and maintaining a healthy sleep schedule.",
-                moderate: "Regular check-ins with a support team and supportive therapy are important.",
-                high: "Antipsychotic medication management and intensive care coordination is critical."
-            },
-            anxiety: {
-                low: "Deep breathing exercises and regular physical activity can reduce symptoms.",
-                moderate: "CBT techniques and reducing caffeine intake may provide relief.",
-                high: "Psychotherapy and a medication evaluation are recommended."
-            },
-            depression: {
-                low: "Regular exercise, sunlight exposure, and socializing can boost mood.",
-                moderate: "Talk therapy and establishing a strong routine is beneficial.",
-                high: "Psychiatric evaluation and potential medication should be considered."
-            }
-        };
+        // Evidence-informed recommendation content.
+// These are general educational suggestions, not diagnosis or medical advice.
+// Source basis: WebMD, NIMH, Mayo Clinic, and condition-specific clinical education resources.
 
-        function getRecommendation(key, severity) {
-            const level = severity < 40 ? 'low' : severity < 70 ? 'moderate' : 'high';
-            const text = recData[key] ? recData[key][level] : "No recommendation available.";
-            return { level, text };
-        }
+const recData = {
+  adhd: {
+    low: {
+      text: "Use low-friction supports: time-blocking, reminders, reduced distractions, written routines, sleep consistency, and exercise. Track whether symptoms affect school, work, relationships, or daily tasks.",
+      sources: ["WebMD ADHD treatment overview"]
+    },
+    moderate: {
+      text: "Consider structured behavioral strategies, skills coaching, CBT-informed organization tools, and a clinical screening if symptoms regularly impair daily functioning. Treatment often combines therapy, behavior changes, skills training, and sometimes medication.",
+      sources: ["WebMD adult ADHD treatment", "WebMD ADHD medications"]
+    },
+    high: {
+      text: "Seek assessment from a qualified clinician. If ADHD is confirmed, discuss a comprehensive plan that may include behavioral therapy, coaching, school/work accommodations, and medication options with monitoring.",
+      sources: ["WebMD adult ADHD treatment", "WebMD ADHD medications"]
+    }
+  },
+
+  autism: {
+    low: {
+      text: "Use supportive adjustments: predictable routines, sensory-friendly environments, clear communication, written plans, and recovery time after demanding social or sensory situations.",
+      sources: ["WebMD autism therapies"]
+    },
+    moderate: {
+      text: "Consider targeted supports such as occupational therapy for sensory or daily-living needs, speech/language therapy for communication goals, social-skills support, and individualized educational or workplace accommodations.",
+      sources: ["WebMD autism treatment", "WebMD autism therapies"]
+    },
+    high: {
+      text: "Seek a comprehensive autism-informed evaluation and support plan. Higher support needs may benefit from coordinated care across occupational therapy, speech/language therapy, behavioral supports, education/work accommodations, and caregiver support.",
+      sources: ["WebMD autism treatment", "WebMD autism therapies"]
+    }
+  },
+
+  ocd: {
+    low: {
+      text: "Track triggers, compulsions, avoidance patterns, and time spent on symptoms. Stress management may help, but avoid turning reassurance-seeking or checking into a repeated ritual.",
+      sources: ["WebMD OCD overview"]
+    },
+    moderate: {
+      text: "Consider OCD-specific therapy, especially Exposure and Response Prevention (ERP), preferably with a trained clinician. ERP focuses on gradually facing triggers while resisting compulsive responses.",
+      sources: ["WebMD OCD treatment", "Mayo Clinic OCD treatment"]
+    },
+    high: {
+      text: "Seek professional OCD treatment. Evidence-based care commonly involves ERP and may include medication such as SSRIs under medical supervision, especially when symptoms are time-consuming or disabling.",
+      sources: ["WebMD OCD treatment", "Mayo Clinic OCD treatment"]
+    }
+  },
+
+  schizophrenia: {
+    low: {
+      text: "Prioritize sleep regularity, stress reduction, substance avoidance, and early support if unusual perceptions, paranoia, or disorganized thinking appear. Consider discussing symptoms with a mental health professional.",
+      sources: ["NIMH schizophrenia", "WebMD schizophrenia treatment"]
+    },
+    moderate: {
+      text: "Seek clinical assessment and ongoing support. Helpful care may include therapy, family education, psychosocial support, and monitoring for psychosis-related symptoms.",
+      sources: ["NIMH schizophrenia", "WebMD schizophrenia treatment"]
+    },
+    high: {
+      text: "Urgent psychiatric care is appropriate for hallucinations, delusions, severe paranoia, major disorganization, or safety concerns. Treatment often includes antipsychotic medication, psychosocial care, family support, and coordinated specialty care.",
+      sources: ["NIMH schizophrenia", "WebMD schizophrenia treatment"]
+    }
+  },
+
+  anxiety: {
+    low: {
+      text: "Try foundational supports: regular aerobic activity, sleep consistency, breathing exercises, reduced caffeine, and identifying avoidant patterns that keep anxiety alive.",
+      sources: ["WebMD anxiety disorders", "WebMD anxiety treatment"]
+    },
+    moderate: {
+      text: "Consider CBT-based therapy, exposure-based strategies where appropriate, mindfulness-based approaches, and lifestyle adjustments. A clinician can help match treatment to the anxiety type.",
+      sources: ["WebMD anxiety disorders", "WebMD generalized anxiety treatment"]
+    },
+    high: {
+      text: "Seek professional evaluation if anxiety causes panic, avoidance, major distress, or impairment. Treatment may include psychotherapy such as CBT and, when appropriate, medication evaluation.",
+      sources: ["WebMD anxiety disorders", "WebMD generalized anxiety treatment"]
+    }
+  },
+
+  depression: {
+    low: {
+      text: "Use mood-support basics: regular activity, daylight exposure, sleep routine, social contact, reduced alcohol/drug use, and small achievable daily tasks.",
+      sources: ["WebMD depression treatment", "WebMD depression lifestyle changes"]
+    },
+    moderate: {
+      text: "Consider psychotherapy such as CBT or interpersonal therapy, routine-building, exercise, and support from a clinician, especially if symptoms persist for more than two weeks or impair daily life.",
+      sources: ["WebMD depression treatment", "WebMD depression doctors and therapists"]
+    },
+    high: {
+      text: "Seek professional help promptly. Significant depression may require psychotherapy, medication evaluation, or combined treatment. If there are thoughts of self-harm or suicide, contact emergency services or a crisis line immediately.",
+      sources: ["WebMD depression treatment", "WebMD depression lifestyle changes"]
+    }
+  }
+};
+
+function getRecommendation(key, severity) {
+  const level = severity < 40 ? "low" : severity < 70 ? "moderate" : "high";
+  const item = recData[key]?.[level];
+
+  return {
+    level,
+    text: item?.text || "No recommendation available.",
+    sources: item?.sources || []
+  };
+}
 
         // Default disorder data structure
         const defaultDisorderData = {
@@ -1023,7 +1090,12 @@
                             <span style="color:${data.cssColor}">${data.name}</span>
                             <span class="rec-badge ${rec.level}">${rec.level.toUpperCase()}</span>
                         </div>
-                        <div class="rec-text">${rec.text}</div>
+                        <div class="rec-text">
+  ${rec.text}
+  <div style="margin-top:8px;font-size:11px;color:var(--muted);">
+    Sources: ${rec.sources.join(", ")}
+  </div>
+</div>
                     </div>
                 `;
             });
@@ -1203,6 +1275,17 @@
                 const splitText = doc.splitTextToSize(rec.text, pageWidth - 30);
                 doc.setTextColor(0, 0, 0);
                 doc.text(splitText, 14, y);
+                y += (splitText.length * 5) + 3;
+
+if (rec.sources && rec.sources.length) {
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    const sourceText = doc.splitTextToSize(`Sources: ${rec.sources.join(", ")}`, pageWidth - 30);
+    doc.text(sourceText, 14, y);
+    y += (sourceText.length * 4) + 5;
+} else {
+    y += 8;
+}
                 
                 y += (splitText.length * 5) + 8;
             });
