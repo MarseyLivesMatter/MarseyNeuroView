@@ -1,3 +1,6 @@
+I will add a logic to generate dynamic suggestions based on severity levels, a "Recommendations" button that opens a modal, and include these suggestions in the PDF export.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -139,18 +142,9 @@
             overflow-y: auto;
         }
 
-        .menu-section::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .menu-section::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .menu-section::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 2px;
-        }
+        .menu-section::-webkit-scrollbar { width: 4px; }
+        .menu-section::-webkit-scrollbar-track { background: transparent; }
+        .menu-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
         .menu-label {
             font-size: 10px;
@@ -172,26 +166,13 @@
             margin: 4px 0;
         }
 
-        .menu-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
+        .menu-item:hover { background: rgba(255, 255, 255, 0.05); }
+        .menu-item.active { background: rgba(255, 159, 67, 0.15); color: var(--accent); }
+        .menu-item.active .menu-icon { color: var(--accent); }
 
-        .menu-item.active {
-            background: rgba(255, 159, 67, 0.15);
-            color: var(--accent);
-        }
+        .menu-icon { width: 20px; height: 20px; color: var(--muted); }
 
-        .menu-item.active .menu-icon {
-            color: var(--accent);
-        }
-
-        .menu-icon {
-            width: 20px;
-            height: 20px;
-            color: var(--muted);
-        }
-
-        /* Disorder Cards with Sliders */
+        /* Disorder Cards */
         .disorder-card {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border);
@@ -201,520 +182,184 @@
             transition: all 0.3s ease;
         }
 
-        .disorder-card:hover {
-            background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
+        .disorder-card:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.15); }
+        .disorder-card.selected { border-color: var(--accent); background: rgba(255, 159, 67, 0.08); }
 
-        .disorder-card.selected {
-            border-color: var(--accent);
-            background: rgba(255, 159, 67, 0.08);
-        }
+        .disorder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .disorder-info { display: flex; align-items: center; gap: 10px; }
+        .disorder-dot { width: 12px; height: 12px; border-radius: 4px; }
+        .disorder-name { font-weight: 600; font-size: 14px; }
+        .disorder-value { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 
-        .disorder-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-
-        .disorder-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .disorder-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 4px;
-        }
-
-        .disorder-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .disorder-value {
-            font-size: 12px;
-            color: var(--muted);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .disorder-sliders {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .slider-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .slider-label {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--muted);
-            width: 70px;
-            flex-shrink: 0;
-        }
-
-        .slider-container {
-            flex: 1;
-            position: relative;
-        }
+        .disorder-sliders { display: flex; flex-direction: column; gap: 10px; }
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); width: 70px; flex-shrink: 0; }
+        .slider-container { flex: 1; position: relative; }
 
         input[type="range"] {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            outline: none;
-            cursor: pointer;
+            -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+            background: rgba(255, 255, 255, 0.1); border-radius: 3px; outline: none; cursor: pointer;
         }
 
         input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            background: var(--accent);
-            border-radius: 50%;
-            cursor: pointer;
+            -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+            background: var(--accent); border-radius: 50%; cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shadow: 0 0 10px rgba(255, 159, 67, 0.4); }
+        input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 159, 67, 0.4); }
 
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 10px rgba(255, 159, 67, 0.4);
-        }
-
-        input[type="range"]:focus-visible::-webkit-slider-thumb {
-            box-shadow: 0 0 0 3px rgba(255, 159, 67, 0.4);
-        }
-
-        .slider-value {
-            font-size: 11px;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--fg);
-            width: 32px;
-            text-align: right;
-        }
+        .slider-value { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--fg); width: 32px; text-align: right; }
 
         /* Toggle Button */
         .sidebar-toggle {
-            position: absolute;
-            right: -44px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 36px;
-            height: 72px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-left: none;
-            border-radius: 0 8px 8px 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
+            position: absolute; right: -44px; top: 50%; transform: translateY(-50%);
+            width: 36px; height: 72px; background: var(--card); border: 1px solid var(--border);
+            border-left: none; border-radius: 0 8px 8px 0; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
         }
-
-        .sidebar-toggle:hover {
-            background: rgba(30, 30, 45, 0.9);
-        }
-
-        .sidebar-toggle svg {
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar.collapsed .sidebar-toggle svg {
-            transform: rotate(180deg);
-        }
+        .sidebar-toggle:hover { background: rgba(30, 30, 45, 0.9); }
+        .sidebar-toggle svg { transition: transform 0.3s ease; }
+        .sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
 
         /* Title Overlay */
         .title-overlay {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50;
-            text-align: center;
-            pointer-events: none;
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+            z-index: 50; text-align: center; pointer-events: none;
         }
-
-        .main-title {
-            font-size: 14px;
-            font-weight: 300;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 8px;
-        }
-
-        .sub-title {
-            font-size: 28px;
-            font-weight: 600;
-            background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+        .main-title { font-size: 14px; font-weight: 300; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+        .sub-title { font-size: 28px; font-weight: 600; background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
         /* Axis Labels */
-        .axis-label {
-            position: fixed;
-            z-index: 50;
-            font-size: 13px;
-            font-weight: 500;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            pointer-events: none;
-        }
-
-        .axis-left {
-            left: 380px;
-            top: 50%;
-            transform: translateY(-50%) rotate(-90deg);
-            color: var(--accent);
-        }
-
-        .axis-right {
-            right: 80px;
-            top: 50%;
-            transform: translateY(-50%) rotate(90deg);
-            color: var(--schizophrenia);
-        }
+        .axis-label { position: fixed; z-index: 50; font-size: 13px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; pointer-events: none; }
+        .axis-left { left: 380px; top: 50%; transform: translateY(-50%) rotate(-90deg); color: var(--accent); }
+        .axis-right { right: 80px; top: 50%; transform: translateY(-50%) rotate(90deg); color: var(--schizophrenia); }
 
         /* Bottom Controls */
         .bottom-controls {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            display: flex;
-            gap: 12px;
-            background: var(--card);
-            backdrop-filter: blur(20px);
-            padding: 12px 20px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            z-index: 100; display: flex; gap: 12px; background: var(--card);
+            backdrop-filter: blur(20px); padding: 12px 20px; border-radius: 16px; border: 1px solid var(--border);
         }
 
         .control-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 18px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--fg);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: 'Space Grotesk', sans-serif;
+            display: flex; align-items: center; gap: 8px; padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--fg); font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s ease; font-family: 'Space Grotesk', sans-serif;
         }
-
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .control-btn:active {
-            transform: translateY(0);
-        }
-
-        .control-btn.primary {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
-            border-color: var(--accent);
-            color: var(--bg);
-        }
-
-        .control-btn.primary:hover {
-            box-shadow: 0 4px 20px rgba(255, 159, 67, 0.4);
-        }
-
-        .control-btn svg {
-            width: 16px;
-            height: 16px;
-        }
+        .control-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); transform: translateY(-2px); }
+        .control-btn:active { transform: translateY(0); }
+        .control-btn.primary { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%); border-color: var(--accent); color: var(--bg); }
+        .control-btn.primary:hover { box-shadow: 0 4px 20px rgba(255, 159, 67, 0.4); }
+        .control-btn.secondary { background: rgba(196, 77, 255, 0.1); border-color: rgba(196, 77, 255, 0.3); color: #c44dff; }
+        .control-btn.secondary:hover { background: rgba(196, 77, 255, 0.2); }
+        .control-btn svg { width: 16px; height: 16px; }
 
         /* Total Severity Panel */
         .total-severity-panel {
-            position: fixed;
-            right: 24px;
-            top: 24px;
-            min-width: 180px;
-            background: var(--card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
-            z-index: 100;
+            position: fixed; right: 24px; top: 24px; min-width: 180px;
+            background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; z-index: 100;
         }
-
-        .total-severity-header {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--muted);
-            margin-bottom: 8px;
-        }
-
-        .total-severity-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 12px;
-        }
-
-        .total-severity-value span {
-            font-size: 16px;
-            color: var(--muted);
-            font-weight: 400;
-        }
-
-        .severity-bar-bg {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .severity-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), #ff6b6b);
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
+        .total-severity-header { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+        .total-severity-value { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 12px; }
+        .total-severity-value span { font-size: 16px; color: var(--muted); font-weight: 400; }
+        .severity-bar-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; }
+        .severity-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #ff6b6b); border-radius: 3px; transition: width 0.3s ease; }
 
         /* Info Panel */
         .info-panel {
-            position: fixed;
-            right: 24px;
-            top: 130px; /* Moved down to accommodate total severity */
-            width: 180px; /* Same width as total panel for alignment */
-            background: var(--card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
-            z-index: 100;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
-            pointer-events: none;
+            position: fixed; right: 24px; top: 130px; width: 180px;
+            background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; z-index: 100; opacity: 0;
+            transform: translateY(-10px); transition: all 0.3s ease; pointer-events: none;
         }
+        .info-panel.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .info-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .info-color { width: 16px; height: 16px; border-radius: 4px; }
+        .info-title { font-size: 18px; font-weight: 600; }
+        .info-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat-box { background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 12px; }
+        .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+        .stat-value { font-size: 20px; font-weight: 600; }
 
-        .info-panel.visible {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        .info-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .info-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-        }
-
-        .info-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .info-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .stat-box {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            padding: 12px;
-        }
-
-        .stat-label {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--muted);
-            margin-bottom: 4px;
-        }
-
-        .stat-value {
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        /* View Mode Indicator */
+        /* View Indicator */
         .view-indicator {
-            position: fixed;
-            right: 24px;
-            bottom: 100px;
-            background: var(--card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px 16px;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            position: fixed; right: 24px; bottom: 100px;
+            background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 16px; z-index: 100; display: flex; align-items: center; gap: 10px;
         }
-
-        .view-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-        }
-
-        .view-text {
-            font-size: 12px;
-            color: var(--muted);
-        }
+        .view-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
+        .view-text { font-size: 12px; color: var(--muted); }
 
         /* Tooltip */
         .tooltip {
-            position: fixed;
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 200;
-            opacity: 0;
-            transition: opacity 0.2s ease;
+            position: fixed; background: rgba(0, 0, 0, 0.9); border: 1px solid var(--border);
+            border-radius: 8px; padding: 8px 12px; font-size: 12px; pointer-events: none;
+            z-index: 200; opacity: 0; transition: opacity 0.2s ease;
         }
+        .tooltip.visible { opacity: 1; }
 
-        .tooltip.visible {
-            opacity: 1;
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px);
+            z-index: 500; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
 
-        /* Loading Screen */
-        .loading-screen {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+        .modal-content {
+            background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px;
+            width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden;
+            display: flex; flex-direction: column; position: relative;
+            transform: scale(0.9); transition: transform 0.3s ease;
         }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
 
-        .loading-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
         }
-
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .modal-title { font-size: 20px; font-weight: 600; color: var(--accent); }
+        .modal-close {
+            background: transparent; border: none; color: var(--muted); cursor: pointer;
+            padding: 4px; transition: color 0.2s;
         }
+        .modal-close:hover { color: var(--fg); }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
 
-        .loading-text {
-            margin-top: 20px;
-            font-size: 14px;
-            color: var(--muted);
-            letter-spacing: 2px;
-        }
+        .rec-item { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .rec-item:last-child { border-bottom: none; margin-bottom: 0; }
+        .rec-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .rec-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.1); }
+        .rec-badge.low { color: #4ecdc4; background: rgba(78, 205, 196, 0.1); }
+        .rec-badge.moderate { color: #ffe66d; background: rgba(255, 230, 109, 0.1); }
+        .rec-badge.high { color: #ff6b6b; background: rgba(255, 107, 107, 0.1); }
+        .rec-text { font-size: 14px; color: var(--muted); line-height: 1.5; }
 
-        /* Reset All Button */
-        .reset-all-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            margin: 16px;
-            background: rgba(255, 107, 107, 0.1);
-            border: 1px solid rgba(255, 107, 107, 0.3);
-            border-radius: 10px;
-            color: #ff6b6b;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: 'Space Grotesk', sans-serif;
-        }
+        /* Loading & Misc */
+        .loading-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease, visibility 0.5s ease; }
+        .loading-screen.hidden { opacity: 0; visibility: hidden; }
+        .loading-spinner { width: 60px; height: 60px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { margin-top: 20px; font-size: 14px; color: var(--muted); letter-spacing: 2px; }
+        .reset-all-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; margin: 16px; background: rgba(255, 107, 107, 0.1); border: 1px solid rgba(255, 107, 107, 0.3); border-radius: 10px; color: #ff6b6b; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; font-family: 'Space Grotesk', sans-serif; }
+        .reset-all-btn:hover { background: rgba(255, 107, 107, 0.2); border-color: rgba(255, 107, 107, 0.5); }
 
-        .reset-all-btn:hover {
-            background: rgba(255, 107, 107, 0.2);
-            border-color: rgba(255, 107, 107, 0.5);
-        }
-
-        /* Responsive */
         @media (max-width: 768px) {
-            .sidebar {
-                width: 280px;
-            }
-            
-            .sidebar.collapsed {
-                transform: translateX(-240px);
-            }
-            
-            .title-overlay {
-                left: 180px;
-            }
-            
-            .axis-left {
-                left: 300px;
-            }
-            
-            .info-panel, .total-severity-panel {
-                right: 12px;
-                width: 160px;
-            }
-            
-            .bottom-controls {
-                flex-wrap: wrap;
-                max-width: 90vw;
-            }
+            .sidebar { width: 280px; }
+            .sidebar.collapsed { transform: translateX(-240px); }
+            .title-overlay { left: 180px; }
+            .axis-left { left: 300px; }
+            .info-panel, .total-severity-panel { right: 12px; width: 160px; }
+            .bottom-controls { flex-wrap: wrap; max-width: 90vw; }
         }
 
-        /* Reduced motion */
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
     </style>
 </head>
@@ -723,6 +368,24 @@
     <div class="loading-screen" id="loading">
         <div class="loading-spinner"></div>
         <div class="loading-text">Initializing MarseyNeuroView...</div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="recModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Personalized Recommendations</div>
+                <button class="modal-close" id="closeModalBtn" aria-label="Close modal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
     </div>
 
     <!-- 3D Canvas -->
@@ -749,27 +412,17 @@
             <div class="menu-label">View Controls</div>
             
             <div class="menu-item active" data-view="default">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7"/>
-                    <rect x="14" y="3" width="7" height="7"/>
-                    <rect x="14" y="14" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/>
-                </svg>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 <span>Overview</span>
             </div>
             
             <div class="menu-item" data-view="top">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                 <span>Top View</span>
             </div>
             
             <div class="menu-item" data-view="side">
-                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                </svg>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 <span>Side View</span>
             </div>
 
@@ -778,18 +431,13 @@
             <div id="disorder-cards"></div>
 
             <button class="reset-all-btn" id="resetAllBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                    <path d="M3 3v5h5"/>
-                </svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 Reset All to Default
             </button>
         </div>
 
         <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
     </aside>
 
@@ -799,13 +447,9 @@
         <div class="sub-title">How Neurologically Deficient Are You</div>
     </div>
 
-    <!-- Axis Labels 
-    <div class="axis-label axis-left">
-        <span>&larr;</span> Hyperfocus
-    </div>
-    <div class="axis-label axis-right">
-        Compulsivity <span>&rarr;</span>
-    </div>-->
+    <!-- Axis Labels
+    <div class="axis-label axis-left"><span>&larr;</span> Hyperfocus</div>
+    <div class="axis-label axis-right">Compulsivity <span>&rarr;</span></div>-->
 
     <!-- Total Severity Panel -->
     <div class="total-severity-panel" id="totalSeverityPanel">
@@ -823,22 +467,10 @@
             <div class="info-title" id="infoTitle">Select a Disorder</div>
         </div>
         <div class="info-stats">
-            <div class="stat-box">
-                <div class="stat-label">Severity</div>
-                <div class="stat-value" id="infoSeverity">--</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Prevalence</div>
-                <div class="stat-value" id="infoPrevalence">--%</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Hyperfocus</div>
-                <div class="stat-value" id="infoHyperfocus">--</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Compulsivity</div>
-                <div class="stat-value" id="infoCompulsivity">--</div>
-            </div>
+            <div class="stat-box"><div class="stat-label">Severity</div><div class="stat-value" id="infoSeverity">--</div></div>
+            <div class="stat-box"><div class="stat-label">Prevalence</div><div class="stat-value" id="infoPrevalence">--%</div></div>
+            <div class="stat-box"><div class="stat-label">Hyperfocus</div><div class="stat-value" id="infoHyperfocus">--</div></div>
+            <div class="stat-box"><div class="stat-label">Compulsivity</div><div class="stat-value" id="infoCompulsivity">--</div></div>
         </div>
     </div>
 
@@ -851,37 +483,23 @@
     <!-- Bottom Controls -->
     <div class="bottom-controls">
         <button class="control-btn" id="resetView">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                <path d="M3 3v5h5"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Reset View
         </button>
         <button class="control-btn" id="toggleRotation">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-                <path d="M21 3v5h-5"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
             Auto Rotate
         </button>
         <button class="control-btn" id="toggleGrid">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <line x1="3" y1="9" x2="21" y2="9"/>
-                <line x1="3" y1="15" x2="21" y2="15"/>
-                <line x1="9" y1="3" x2="9" y2="21"/>
-                <line x1="15" y1="3" x2="15" y2="21"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
             Toggle Grid
         </button>
+        <button class="control-btn secondary" id="showRecBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Recommendations
+        </button>
         <button class="control-btn primary" id="exportPDF">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             Export PDF
         </button>
     </div>
@@ -902,79 +520,61 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // Get jsPDF from global scope
         const { jsPDF } = window.jspdf;
+        const MAX_TOTAL_SEVERITY = 600;
 
-        const MAX_TOTAL_SEVERITY = 600; // 6 disorders * 100 max severity
-
-        // Default disorder data with fixed positions (circular layout)
-        const defaultDisorderData = {
+        // Recommendation Logic
+        const recData = {
             adhd: {
-                name: 'ADHD',
-                color: 0xff6b6b,
-                cssColor: '#ff6b6b',
-                severity: 72,
-                prevalence: 5.7,
-                hyperfocus: 85,
-                compulsivity: 35,
-                position: { x: 3.5, y: 0, z: 0 }
+                low: "Try time-blocking techniques and minimize distractions.",
+                moderate: "Consider Cognitive Behavioral Therapy (CBT) and digital organization tools.",
+                high: "Professional assessment for medication and structured coaching is recommended."
             },
             autism: {
-                name: 'Autism',
-                color: 0x4ecdc4,
-                cssColor: '#4ecdc4',
-                severity: 65,
-                prevalence: 2.3,
-                hyperfocus: 90,
-                compulsivity: 45,
-                position: { x: 1.75, y: 0, z: 3.03 }
+                low: "Social scripts and clear communication can help navigate interactions.",
+                moderate: "Occupational therapy for sensory issues and routine structuring is beneficial.",
+                high: "Intensive behavioral support and specialized professional care is advised."
             },
             ocd: {
-                name: 'OCD',
-                color: 0xffe66d,
-                cssColor: '#ffe66d',
-                severity: 58,
-                prevalence: 1.2,
-                hyperfocus: 55,
-                compulsivity: 92,
-                position: { x: -1.75, y: 0, z: 3.03 }
+                low: "Mindfulness meditation and stress reduction exercises may help.",
+                moderate: "Exposure and Response Prevention (ERP) self-help resources are recommended.",
+                high: "Professional ERP therapy and psychiatric consultation is highly recommended."
             },
             schizophrenia: {
-                name: 'Schizophrenia',
-                color: 0xc44dff,
-                cssColor: '#c44dff',
-                severity: 88,
-                prevalence: 0.7,
-                hyperfocus: 40,
-                compulsivity: 70,
-                position: { x: -3.5, y: 0, z: 0 }
+                low: "Focus on stress management and maintaining a healthy sleep schedule.",
+                moderate: "Regular check-ins with a support team and supportive therapy are important.",
+                high: "Antipsychotic medication management and intensive care coordination is critical."
             },
             anxiety: {
-                name: 'Anxiety',
-                color: 0xff9f43,
-                cssColor: '#ff9f43',
-                severity: 52,
-                prevalence: 18.1,
-                hyperfocus: 30,
-                compulsivity: 75,
-                position: { x: -1.75, y: 0, z: -3.03 }
+                low: "Deep breathing exercises and regular physical activity can reduce symptoms.",
+                moderate: "CBT techniques and reducing caffeine intake may provide relief.",
+                high: "Psychotherapy and a medication evaluation are recommended."
             },
             depression: {
-                name: 'Depression',
-                color: 0x5f9ea0,
-                cssColor: '#5f9ea0',
-                severity: 68,
-                prevalence: 4.4,
-                hyperfocus: 25,
-                compulsivity: 50,
-                position: { x: 1.75, y: 0, z: -3.03 }
+                low: "Regular exercise, sunlight exposure, and socializing can boost mood.",
+                moderate: "Talk therapy and establishing a strong routine is beneficial.",
+                high: "Psychiatric evaluation and potential medication should be considered."
             }
         };
 
-        // Current disorder data (mutable)
+        function getRecommendation(key, severity) {
+            const level = severity < 40 ? 'low' : severity < 70 ? 'moderate' : 'high';
+            const text = recData[key] ? recData[key][level] : "No recommendation available.";
+            return { level, text };
+        }
+
+        // Default disorder data with fixed positions (circular layout)
+        const defaultDisorderData = {
+            adhd: { name: 'ADHD', color: 0xff6b6b, cssColor: '#ff6b6b', severity: 72, prevalence: 5.7, hyperfocus: 85, compulsivity: 35, position: { x: 3.5, y: 0, z: 0 } },
+            autism: { name: 'Autism', color: 0x4ecdc4, cssColor: '#4ecdc4', severity: 65, prevalence: 2.3, hyperfocus: 90, compulsivity: 45, position: { x: 1.75, y: 0, z: 3.03 } },
+            ocd: { name: 'OCD', color: 0xffe66d, cssColor: '#ffe66d', severity: 58, prevalence: 1.2, hyperfocus: 55, compulsivity: 92, position: { x: -1.75, y: 0, z: 3.03 } },
+            schizophrenia: { name: 'Schizophrenia', color: 0xc44dff, cssColor: '#c44dff', severity: 88, prevalence: 0.7, hyperfocus: 40, compulsivity: 70, position: { x: -3.5, y: 0, z: 0 } },
+            anxiety: { name: 'Anxiety', color: 0xff9f43, cssColor: '#ff9f43', severity: 52, prevalence: 18.1, hyperfocus: 30, compulsivity: 75, position: { x: -1.75, y: 0, z: -3.03 } },
+            depression: { name: 'Depression', color: 0x5f9ea0, cssColor: '#5f9ea0', severity: 68, prevalence: 4.4, hyperfocus: 25, compulsivity: 50, position: { x: 1.75, y: 0, z: -3.03 } }
+        };
+
         let disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
 
-        // Initialize variables
         let scene, camera, renderer, controls;
         let cubes = {};
         let labels = {};
@@ -997,23 +597,20 @@
         const usernameInput = document.getElementById('usernameInput');
         const totalSeverityValueEl = document.getElementById('totalSeverityValue');
         const severityBarFillEl = document.getElementById('severityBarFill');
+        const recModal = document.getElementById('recModal');
+        const modalBody = document.getElementById('modalBody');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const showRecBtn = document.getElementById('showRecBtn');
 
-        // Update Total Severity UI
         function updateTotalSeverity() {
             let total = 0;
-            Object.values(disorderData).forEach(d => {
-                total += d.severity;
-            });
-            
+            Object.values(disorderData).forEach(d => total += d.severity);
             totalSeverityValueEl.textContent = total;
-            const percentage = (total / MAX_TOTAL_SEVERITY) * 100;
-            severityBarFillEl.style.width = `${percentage}%`;
+            severityBarFillEl.style.width = `${(total / MAX_TOTAL_SEVERITY) * 100}%`;
         }
 
-        // Create disorder cards with sliders
         function createDisorderCards() {
             disorderCardsContainer.innerHTML = '';
-            
             Object.entries(disorderData).forEach(([key, data]) => {
                 const card = document.createElement('div');
                 card.className = 'disorder-card';
@@ -1030,68 +627,49 @@
                         <div class="slider-row">
                             <span class="slider-label">Severity</span>
                             <div class="slider-container">
-                                <input type="range" min="10" max="100" value="${data.severity}" 
-                                    data-disorder="${key}" data-type="severity"
-                                    aria-label="${data.name} severity">
+                                <input type="range" min="10" max="100" value="${data.severity}" data-disorder="${key}" data-type="severity" aria-label="${data.name} severity">
                             </div>
                             <span class="slider-value" id="severity-display-${key}">${data.severity}</span>
                         </div>
                         <div class="slider-row">
                             <span class="slider-label">Hyperfocus</span>
                             <div class="slider-container">
-                                <input type="range" min="0" max="100" value="${data.hyperfocus}" 
-                                    data-disorder="${key}" data-type="hyperfocus"
-                                    aria-label="${data.name} hyperfocus">
+                                <input type="range" min="0" max="100" value="${data.hyperfocus}" data-disorder="${key}" data-type="hyperfocus" aria-label="${data.name} hyperfocus">
                             </div>
                             <span class="slider-value" id="hyperfocus-display-${key}">${data.hyperfocus}</span>
                         </div>
                         <div class="slider-row">
                             <span class="slider-label">Compulsivity</span>
                             <div class="slider-container">
-                                <input type="range" min="0" max="100" value="${data.compulsivity}" 
-                                    data-disorder="${key}" data-type="compulsivity"
-                                    aria-label="${data.name} compulsivity">
+                                <input type="range" min="0" max="100" value="${data.compulsivity}" data-disorder="${key}" data-type="compulsivity" aria-label="${data.name} compulsivity">
                             </div>
                             <span class="slider-value" id="compulsivity-display-${key}">${data.compulsivity}</span>
                         </div>
-                    </div>
-                `;
-                
+                    </div>`;
                 disorderCardsContainer.appendChild(card);
             });
-
-            document.querySelectorAll('input[type="range"]').forEach(slider => {
-                slider.addEventListener('input', handleSliderChange);
-            });
+            document.querySelectorAll('input[type="range"]').forEach(slider => slider.addEventListener('input', handleSliderChange));
         }
 
         function handleSliderChange(e) {
             const disorderKey = e.target.dataset.disorder;
             const type = e.target.dataset.type;
             const value = parseInt(e.target.value);
-
             disorderData[disorderKey][type] = value;
-
             document.getElementById(`${type}-display-${disorderKey}`).textContent = value;
             if (type === 'severity') {
                 document.getElementById(`severity-value-${disorderKey}`).textContent = value;
                 updateCubeHeight(disorderKey);
                 updateTotalSeverity();
             }
-
-            if (selectedDisorder === disorderKey) {
-                updateInfoPanel(disorderKey);
-            }
+            if (selectedDisorder === disorderKey) updateInfoPanel(disorderKey);
         }
 
         function updateCubeHeight(disorderKey) {
             const data = disorderData[disorderKey];
             const cube = cubes[disorderKey];
-            
             if (!cube) return;
-
             const targetHeight = data.severity / 20;
-            
             const animateHeight = () => {
                 const diff = targetHeight - cube.scale.y;
                 if (Math.abs(diff) > 0.01) {
@@ -1104,24 +682,18 @@
                 }
             };
             animateHeight();
-
             updateLabelPosition(disorderKey, targetHeight + 0.8);
         }
 
         function updateLabelPosition(disorderKey, y) {
-            const label = labels[disorderKey];
-            if (label) {
-                label.position.y = y;
-            }
+            if (labels[disorderKey]) labels[disorderKey].position.y = y;
         }
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a0f);
-
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(8, 6, 8);
-
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1143,8 +715,6 @@
             createParticles();
             createGroundPlane();
             setupEventListeners();
-            
-            // Initial calculation
             updateTotalSeverity();
 
             setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
@@ -1152,9 +722,7 @@
         }
 
         function setupLights() {
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
-
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
             const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
             mainLight.position.set(10, 15, 10);
             mainLight.castShadow = true;
@@ -1185,18 +753,9 @@
 
         function createDisorderCubes() {
             const geometry = new THREE.BoxGeometry(1.2, 1, 1.2);
-
             Object.entries(disorderData).forEach(([key, data]) => {
                 const height = data.severity / 20;
-                
-                const material = new THREE.MeshStandardMaterial({
-                    color: data.color,
-                    metalness: 0.3,
-                    roughness: 0.4,
-                    emissive: data.color,
-                    emissiveIntensity: 0.1
-                });
-
+                const material = new THREE.MeshStandardMaterial({ color: data.color, metalness: 0.3, roughness: 0.4, emissive: data.color, emissiveIntensity: 0.1 });
                 const cube = new THREE.Mesh(geometry, material);
                 cube.scale.y = height;
                 cube.position.set(data.position.x, height / 2, data.position.z);
@@ -1223,7 +782,6 @@
             const context = canvas.getContext('2d');
             canvas.width = 256;
             canvas.height = 64;
-
             context.fillStyle = 'transparent';
             context.fillRect(0, 0, canvas.width, canvas.height);
             context.font = 'bold 32px Space Grotesk, sans-serif';
@@ -1235,10 +793,8 @@
             context.shadowOffsetY = 2;
             context.fillStyle = '#' + color.toString(16).padStart(6, '0');
             context.fillText(text, canvas.width / 2, canvas.height / 2);
-
             const texture = new THREE.CanvasTexture(canvas);
             texture.needsUpdate = true;
-
             const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
             const sprite = new THREE.Sprite(spriteMaterial);
             sprite.position.set(x, y, z);
@@ -1252,27 +808,22 @@
             const positions = new Float32Array(particleCount * 3);
             const colors = new Float32Array(particleCount * 3);
             const sizes = new Float32Array(particleCount);
-
             const colorPalette = [new THREE.Color(0xff9f43), new THREE.Color(0xc44dff), new THREE.Color(0xff6b6b), new THREE.Color(0x4ecdc4), new THREE.Color(0xffe66d)];
-
             for (let i = 0; i < particleCount; i++) {
                 const i3 = i * 3;
                 positions[i3] = (Math.random() - 0.5) * 40;
                 positions[i3 + 1] = Math.random() * 15;
                 positions[i3 + 2] = (Math.random() - 0.5) * 40;
-
                 const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
                 colors[i3] = color.r;
                 colors[i3 + 1] = color.g;
                 colors[i3 + 2] = color.b;
                 sizes[i] = Math.random() * 3 + 1;
             }
-
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
             const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, sizeAttenuation: true });
             const particles = new THREE.Points(geometry, material);
             particles.userData.isParticle = true;
@@ -1320,6 +871,35 @@
             document.getElementById('toggleGrid').addEventListener('click', toggleGridVisibility);
             document.getElementById('exportPDF').addEventListener('click', exportToPDF);
             document.getElementById('resetAllBtn').addEventListener('click', resetAllDisorders);
+            
+            // Modal listeners
+            showRecBtn.addEventListener('click', openRecModal);
+            closeModalBtn.addEventListener('click', closeRecModal);
+            recModal.addEventListener('click', (e) => {
+                if (e.target === recModal) closeRecModal();
+            });
+        }
+
+        function openRecModal() {
+            let html = '';
+            Object.entries(disorderData).forEach(([key, data]) => {
+                const rec = getRecommendation(key, data.severity);
+                html += `
+                    <div class="rec-item">
+                        <div class="rec-title">
+                            <span style="color:${data.cssColor}">${data.name}</span>
+                            <span class="rec-badge ${rec.level}">${rec.level.toUpperCase()}</span>
+                        </div>
+                        <div class="rec-text">${rec.text}</div>
+                    </div>
+                `;
+            });
+            modalBody.innerHTML = html;
+            recModal.classList.add('visible');
+        }
+
+        function closeRecModal() {
+            recModal.classList.remove('visible');
         }
 
         function onWindowResize() {
@@ -1331,11 +911,9 @@
         function onMouseMove(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
             raycaster.setFromCamera(mouse, camera);
             const cubeArray = Object.values(cubes);
             const intersects = raycaster.intersectObjects(cubeArray);
-
             if (intersects.length > 0) {
                 const cube = intersects[0].object;
                 if (hoveredCube !== cube) {
@@ -1419,35 +997,22 @@
             document.getElementById('toggleGrid').style.background = showGrid ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
         }
 
-        // Helper to resize and compress image data
         function getCompressedDataURL(sourceCanvas, maxWidth, quality) {
             const aspect = sourceCanvas.height / sourceCanvas.width;
             const width = Math.min(sourceCanvas.width, maxWidth);
             const height = width * aspect;
-
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = width;
             tempCanvas.height = height;
-            
             const ctx = tempCanvas.getContext('2d');
             ctx.drawImage(sourceCanvas, 0, 0, width, height);
-            
             return tempCanvas.toDataURL('image/jpeg', quality);
         }
 
         function exportToPDF() {
             renderer.render(scene, camera);
-            
-            // Resize image to max 1920px width and compress as JPEG at 70% quality
             const imgData = getCompressedDataURL(renderer.domElement, 1920, 0.70);
-            
-            // Initialize jsPDF with compression enabled
-            const doc = new jsPDF({
-                orientation: 'l',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
-            });
+            const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4', compress: true });
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
@@ -1476,37 +1041,40 @@
             const imgHeight = (imgWidth * 9) / 16;
             doc.addImage(imgData, 'JPEG', 14, 45, imgWidth, imgHeight);
             
-            const tableStartY = 45 + imgHeight + 10;
+            // Add new page for recommendations to ensure space
+            doc.addPage();
             
-            doc.setFontSize(14);
-            doc.setTextColor(255, 255, 255);
-            doc.text('Disorder Analysis Data', 14, tableStartY);
-            
-            let y = tableStartY + 8;
-            doc.setFontSize(9);
-            doc.setTextColor(100, 100, 100);
-            doc.setFillColor(30, 30, 40);
-            doc.rect(14, y - 4, pageWidth - 28, 8, 'F');
-            
+            doc.setFontSize(20);
             doc.setTextColor(255, 159, 67);
-            doc.text('Disorder', 18, y);
-            doc.text('Severity', 55, y);
-            doc.text('Hyperfocus', 85, y);
-            doc.text('Compulsivity', 120, y);
-            doc.text('Prevalence', 155, y);
-            
-            y += 8;
-            
+            doc.text('Recommendations', 14, 20);
+
+            let y = 35;
+
             Object.entries(disorderData).forEach(([key, data]) => {
-                doc.setTextColor(200, 200, 200);
-                doc.text(data.name, 18, y);
-                doc.text(String(data.severity), 55, y);
-                doc.text(String(data.hyperfocus), 85, y);
-                doc.text(String(data.compulsivity), 120, y);
-                doc.text(data.prevalence + '%', 155, y);
+                if (y > pageHeight - 40) { 
+                    doc.addPage(); 
+                    y = 20; 
+                }
+
+                const rec = getRecommendation(key, data.severity);
+                
+                doc.setFontSize(14);
+                doc.setTextColor(data.cssColor);
+                doc.text(data.name, 14, y);
+                
+                doc.setFontSize(10);
+                doc.setTextColor(150, 150, 150);
+                doc.text(`Level: ${rec.level.charAt(0).toUpperCase() + rec.level.slice(1)}`, 60, y);
+
                 y += 6;
+                
+                const splitText = doc.splitTextToSize(rec.text, pageWidth - 30);
+                doc.setTextColor(230, 230, 230);
+                doc.text(splitText, 14, y);
+                
+                y += (splitText.length * 5) + 8;
             });
-            
+
             doc.setFontSize(8);
             doc.setTextColor(80, 80, 80);
             doc.text(`Report for ${username} - MarseyNeuroView`, pageWidth / 2, pageHeight - 10, { align: 'center' });
@@ -1527,21 +1095,17 @@
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-
             const time = Date.now() * 0.001;
             Object.entries(cubes).forEach(([key, cube], i) => {
                 const baseHeight = cube.scale.y;
                 cube.position.y = baseHeight / 2 + Math.sin(time + i) * 0.03;
-                
                 const pulse = 1 + Math.sin(time * 2 + i * 0.5) * 0.01;
                 cube.scale.x = pulse;
                 cube.scale.z = pulse;
             });
-
             scene.children.forEach(child => {
                 if (child.userData && child.userData.isParticle) child.rotation.y += 0.0003;
             });
-
             renderer.render(scene, camera);
         }
 
