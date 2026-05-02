@@ -1,10 +1,16 @@
+I will remove the floating text labels (sprites) above the bars to clean up the 3D view, and I will optimize the PDF export by enabling compression and using JPEG format for the screenshot to reduce file size.
 
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarseyNeuroView - 3D Disorder Chart</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -499,8 +505,8 @@
         .info-panel {
             position: fixed;
             right: 24px;
-            top: 130px; /* Moved down to accommodate total severity */
-            width: 180px; /* Same width as total panel for alignment */
+            top: 130px;
+            width: 180px;
             background: var(--card);
             backdrop-filter: blur(20px);
             border: 1px solid var(--border);
@@ -974,7 +980,7 @@
         // Initialize variables
         let scene, camera, renderer, controls;
         let cubes = {};
-        let labels = {};
+        // Labels object is no longer needed for sprites, but we keep track of cubes
         let gridHelper;
         let autoRotate = false;
         let showGrid = true;
@@ -1101,15 +1107,6 @@
                 }
             };
             animateHeight();
-
-            updateLabelPosition(disorderKey, targetHeight + 0.8);
-        }
-
-        function updateLabelPosition(disorderKey, y) {
-            const label = labels[disorderKey];
-            if (label) {
-                label.position.y = y;
-            }
         }
 
         function init() {
@@ -1141,7 +1138,6 @@
             createGroundPlane();
             setupEventListeners();
             
-            // Initial calculation
             updateTotalSeverity();
 
             setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
@@ -1210,38 +1206,8 @@
                 scene.add(cube);
                 cubes[key] = cube;
 
-                const label = createLabel(data.name, data.position.x, height + 0.8, data.position.z, data.color);
-                labels[key] = label;
+                // Removed: createLabel call - labels are no longer added to the 3D scene
             });
-        }
-
-        function createLabel(text, x, y, z, color) {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 256;
-            canvas.height = 64;
-
-            context.fillStyle = 'transparent';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.font = 'bold 32px Space Grotesk, sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            context.shadowBlur = 8;
-            context.shadowOffsetX = 2;
-            context.shadowOffsetY = 2;
-            context.fillStyle = '#' + color.toString(16).padStart(6, '0');
-            context.fillText(text, canvas.width / 2, canvas.height / 2);
-
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.needsUpdate = true;
-
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.position.set(x, y, z);
-            sprite.scale.set(2, 0.5, 1);
-            scene.add(sprite);
-            return sprite;
         }
 
         function createParticles() {
@@ -1418,8 +1384,18 @@
 
         function exportToPDF() {
             renderer.render(scene, camera);
-            const imgData = renderer.domElement.toDataURL('image/png');
-            const doc = new jsPDF('l', 'mm', 'a4');
+            
+            // Use JPEG for smaller image size
+            const imgData = renderer.domElement.toDataURL('image/jpeg', 0.75);
+            
+            // Initialize with compression
+            const doc = new jsPDF({
+                orientation: 'l',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+            
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             
@@ -1445,7 +1421,7 @@
             
             const imgWidth = pageWidth - 28;
             const imgHeight = (imgWidth * 9) / 16;
-            doc.addImage(imgData, 'PNG', 14, 45, imgWidth, imgHeight);
+            doc.addImage(imgData, 'JPEG', 14, 45, imgWidth, imgHeight);
             
             const tableStartY = 45 + imgHeight + 10;
             
