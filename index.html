@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">    
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="manifest" href="site.webmanifest">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -215,11 +215,6 @@
         .main-title { font-size: 14px; font-weight: 300; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
         .sub-title { font-size: 28px; font-weight: 600; background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-        /* Axis Labels */
-        .axis-label { position: fixed; z-index: 50; font-size: 13px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; pointer-events: none; }
-        .axis-left { left: 380px; top: 50%; transform: translateY(-50%) rotate(-90deg); color: var(--accent); }
-        .axis-right { right: 80px; top: 50%; transform: translateY(-50%) rotate(90deg); color: var(--schizophrenia); }
-
         /* Bottom Controls */
         .bottom-controls {
             position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -338,7 +333,6 @@
             .sidebar { width: 280px; }
             .sidebar.collapsed { transform: translateX(-240px); }
             .title-overlay { left: 180px; }
-            .axis-left { left: 300px; }
             .info-panel, .total-severity-panel { right: 12px; width: 160px; }
             .bottom-controls { flex-wrap: wrap; max-width: 90vw; }
         }
@@ -367,9 +361,7 @@
                     </svg>
                 </button>
             </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Content injected via JS -->
-            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
@@ -411,7 +403,7 @@
                 <span>Side View</span>
             </div>
 
-            <div class="menu-label" style="margin-top: 24px;">Adjust Disorder Bars</div>
+            <div class="menu-label" style="margin-top: 24px;">Adjust Disorder Severity Levels</div>
             
             <div id="disorder-cards"></div>
 
@@ -432,10 +424,6 @@
         <div class="sub-title">How Neurologically Deficient Are You</div>
     </div>
 
-    <!-- Axis Labels 
-    <div class="axis-label axis-left"><span>&larr;</span> Hyperfocus</div>
-    <div class="axis-label axis-right">Compulsivity <span>&rarr;</span></div>-->
-
     <!-- Total Severity Panel -->
     <div class="total-severity-panel" id="totalSeverityPanel">
         <div class="total-severity-header">Total Severity</div>
@@ -454,8 +442,6 @@
         <div class="info-stats">
             <div class="stat-box"><div class="stat-label">Severity</div><div class="stat-value" id="infoSeverity">--</div></div>
             <div class="stat-box"><div class="stat-label">Prevalence</div><div class="stat-value" id="infoPrevalence">--%</div></div>
-            <div class="stat-box"><div class="stat-label">Hyperfocus</div><div class="stat-value" id="infoHyperfocus">--</div></div>
-            <div class="stat-box"><div class="stat-label">Compulsivity</div><div class="stat-value" id="infoCompulsivity">--</div></div>
         </div>
     </div>
 
@@ -548,21 +534,32 @@
             return { level, text };
         }
 
-        // Default disorder data
+        // Default disorder data structure
         const defaultDisorderData = {
-            adhd: { name: 'ADHD', color: 0xff6b6b, cssColor: '#ff6b6b', severity: 72, prevalence: 5.7, hyperfocus: 85, compulsivity: 35, position: { x: 3.5, y: 0, z: 0 } },
-            autism: { name: 'Autism', color: 0x4ecdc4, cssColor: '#4ecdc4', severity: 65, prevalence: 2.3, hyperfocus: 90, compulsivity: 45, position: { x: 1.75, y: 0, z: 3.03 } },
-            ocd: { name: 'OCD', color: 0xffe66d, cssColor: '#ffe66d', severity: 58, prevalence: 1.2, hyperfocus: 55, compulsivity: 92, position: { x: -1.75, y: 0, z: 3.03 } },
-            schizophrenia: { name: 'Schizophrenia', color: 0xc44dff, cssColor: '#c44dff', severity: 88, prevalence: 0.7, hyperfocus: 40, compulsivity: 70, position: { x: -3.5, y: 0, z: 0 } },
-            anxiety: { name: 'Anxiety', color: 0xff9f43, cssColor: '#ff9f43', severity: 52, prevalence: 18.1, hyperfocus: 30, compulsivity: 75, position: { x: -1.75, y: 0, z: -3.03 } },
-            depression: { name: 'Depression', color: 0x5f9ea0, cssColor: '#5f9ea0', severity: 68, prevalence: 4.4, hyperfocus: 25, compulsivity: 50, position: { x: 1.75, y: 0, z: -3.03 } }
+            adhd: { name: 'ADHD', color: 0xff6b6b, cssColor: '#ff6b6b', severity: 10, prevalence: 5.7, position: { x: 3.5, y: 0, z: 0 } },
+            autism: { name: 'Autism', color: 0x4ecdc4, cssColor: '#4ecdc4', severity: 10, prevalence: 2.3, position: { x: 1.75, y: 0, z: 3.03 } },
+            ocd: { name: 'OCD', color: 0xffe66d, cssColor: '#ffe66d', severity: 10, prevalence: 1.2, position: { x: -1.75, y: 0, z: 3.03 } },
+            schizophrenia: { name: 'Schizophrenia', color: 0xc44dff, cssColor: '#c44dff', severity: 10, prevalence: 0.7, position: { x: -3.5, y: 0, z: 0 } },
+            anxiety: { name: 'Anxiety', color: 0xff9f43, cssColor: '#ff9f43', severity: 10, prevalence: 18.1, position: { x: -1.75, y: 0, z: -3.03 } },
+            depression: { name: 'Depression', color: 0x5f9ea0, cssColor: '#5f9ea0', severity: 10, prevalence: 4.4, position: { x: 1.75, y: 0, z: -3.03 } }
         };
+
+        // Helper to generate random int between min and max (inclusive)
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Initialize random severity for defaults on first load
+        Object.keys(defaultDisorderData).forEach(key => {
+            defaultDisorderData[key].severity = getRandomInt(10, 100);
+        });
 
         let disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
 
         let scene, camera, renderer, controls;
         let cubes = {};
         let labels = {};
+        let severityLabels = {};
         let gridHelper;
         let autoRotate = false;
         let showGrid = true;
@@ -589,9 +586,16 @@
 
         function updateTotalSeverity() {
             let total = 0;
-            Object.values(disorderData).forEach(d => total += d.severity);
-            totalSeverityValueEl.textContent = total;
-            severityBarFillEl.style.width = `${(total / MAX_TOTAL_SEVERITY) * 100}%`;
+            Object.values(disorderData).forEach(d => {
+                total += d.severity;
+            });
+            
+            if (totalSeverityValueEl) {
+                totalSeverityValueEl.textContent = total;
+            }
+            if (severityBarFillEl) {
+                severityBarFillEl.style.width = `${(total / MAX_TOTAL_SEVERITY) * 100}%`;
+            }
         }
 
         function createDisorderCards() {
@@ -612,49 +616,43 @@
                         <div class="slider-row">
                             <span class="slider-label">Severity</span>
                             <div class="slider-container">
-                                <input type="range" min="10" max="100" value="${data.severity}" data-disorder="${key}" data-type="severity" aria-label="${data.name} severity">
+                                <input type="range" min="10" max="100" value="${data.severity}" data-disorder="${key}" aria-label="${data.name} severity">
                             </div>
                             <span class="slider-value" id="severity-display-${key}">${data.severity}</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Hyperfocus</span>
-                            <div class="slider-container">
-                                <input type="range" min="0" max="100" value="${data.hyperfocus}" data-disorder="${key}" data-type="hyperfocus" aria-label="${data.name} hyperfocus">
-                            </div>
-                            <span class="slider-value" id="hyperfocus-display-${key}">${data.hyperfocus}</span>
-                        </div>
-                        <div class="slider-row">
-                            <span class="slider-label">Compulsivity</span>
-                            <div class="slider-container">
-                                <input type="range" min="0" max="100" value="${data.compulsivity}" data-disorder="${key}" data-type="compulsivity" aria-label="${data.name} compulsivity">
-                            </div>
-                            <span class="slider-value" id="compulsivity-display-${key}">${data.compulsivity}</span>
                         </div>
                     </div>`;
                 disorderCardsContainer.appendChild(card);
             });
-            document.querySelectorAll('input[type="range"]').forEach(slider => slider.addEventListener('input', handleSliderChange));
+            
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                slider.addEventListener('input', handleSliderChange);
+            });
         }
 
         function handleSliderChange(e) {
             const disorderKey = e.target.dataset.disorder;
-            const type = e.target.dataset.type;
             const value = parseInt(e.target.value);
-            disorderData[disorderKey][type] = value;
-            document.getElementById(`${type}-display-${disorderKey}`).textContent = value;
-            if (type === 'severity') {
-                document.getElementById(`severity-value-${disorderKey}`).textContent = value;
-                updateCubeHeight(disorderKey);
-                updateTotalSeverity();
+
+            disorderData[disorderKey].severity = value;
+
+            document.getElementById(`severity-display-${disorderKey}`).textContent = value;
+            document.getElementById(`severity-value-${disorderKey}`).textContent = value;
+            
+            updateTotalSeverity();
+            updateCubeHeight(disorderKey);
+            
+            if (selectedDisorder === disorderKey) {
+                updateInfoPanel(disorderKey);
             }
-            if (selectedDisorder === disorderKey) updateInfoPanel(disorderKey);
         }
 
         function updateCubeHeight(disorderKey) {
             const data = disorderData[disorderKey];
             const cube = cubes[disorderKey];
             if (!cube) return;
+            
             const targetHeight = data.severity / 20;
+            
             const animateHeight = () => {
                 const diff = targetHeight - cube.scale.y;
                 if (Math.abs(diff) > 0.01) {
@@ -667,11 +665,35 @@
                 }
             };
             animateHeight();
+            
             updateLabelPosition(disorderKey, targetHeight + 0.8);
+            updateSeverityLabel(disorderKey, data.severity, targetHeight / 2);
         }
 
-        function updateLabelPosition(disorderKey, y) {
-            if (labels[disorderKey]) labels[disorderKey].position.y = y;
+        function updateSeverityLabel(key, value, y) {
+            const label = severityLabels[key];
+            if (!label) return;
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 128;
+            canvas.height = 64;
+
+            context.font = 'bold 48px JetBrains Mono, monospace';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            
+            context.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            context.shadowBlur = 4;
+            
+            context.fillStyle = '#ffffff';
+            context.fillText(value.toString(), canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            label.material.map = texture;
+            
+            label.position.y = y;
         }
 
         function init() {
@@ -700,6 +722,7 @@
             createParticles();
             createGroundPlane();
             setupEventListeners();
+            
             updateTotalSeverity();
 
             setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
@@ -759,7 +782,35 @@
 
                 const label = createLabel(data.name, data.position.x, height + 0.8, data.position.z, data.color);
                 labels[key] = label;
+
+                const sevLabel = createSeveritySprite(data.severity, data.position.x + 0.9, height / 2, data.position.z);
+                severityLabels[key] = sevLabel;
             });
+        }
+
+        function createSeveritySprite(value, x, y, z) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 128;
+            canvas.height = 64;
+
+            context.font = 'bold 48px JetBrains Mono, monospace';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            context.shadowBlur = 4;
+            context.fillStyle = '#ffffff';
+            context.fillText(value.toString(), canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(x, y, z);
+            sprite.scale.set(0.8, 0.4, 1);
+            scene.add(sprite);
+            return sprite;
         }
 
         function createLabel(text, x, y, z, color) {
@@ -832,8 +883,6 @@
             document.getElementById('infoTitle').textContent = data.name;
             document.getElementById('infoSeverity').textContent = data.severity;
             document.getElementById('infoPrevalence').textContent = data.prevalence + '%';
-            document.getElementById('infoHyperfocus').textContent = data.hyperfocus;
-            document.getElementById('infoCompulsivity').textContent = data.compulsivity;
             infoPanel.classList.add('visible');
         }
 
@@ -857,7 +906,6 @@
             document.getElementById('exportPDF').addEventListener('click', exportToPDF);
             document.getElementById('resetAllBtn').addEventListener('click', resetAllDisorders);
             
-            // Modal listeners
             showRecBtn.addEventListener('click', openRecModal);
             closeModalBtn.addEventListener('click', closeRecModal);
             recModal.addEventListener('click', (e) => {
@@ -1010,7 +1058,7 @@
             doc.text('MarseyNeuroView Report', 14, 20);
             
             doc.setFontSize(12);
-            doc.setTextColor(100, 100, 100); // Dark gray for user info
+            doc.setTextColor(100, 100, 100);
             doc.text(`User: ${username}`, 14, 30);
             
             doc.setFontSize(14);
@@ -1026,7 +1074,6 @@
             const imgHeight = (imgWidth * 9) / 16;
             doc.addImage(imgData, 'JPEG', 14, 45, imgWidth, imgHeight);
             
-            // Add new page for recommendations
             doc.addPage();
             
             doc.setFontSize(20);
@@ -1044,20 +1091,17 @@
                 const rec = getRecommendation(key, data.severity);
                 
                 doc.setFontSize(14);
-                // Keep disorder name colored for visual association
-                doc.setTextColor(data.cssColor); 
+                doc.setTextColor(data.cssColor);
                 doc.text(data.name, 14, y);
                 
                 doc.setFontSize(10);
-                doc.setTextColor(80, 80, 80); // Dark gray for level
+                doc.setTextColor(80, 80, 80);
                 doc.text(`Level: ${rec.level.charAt(0).toUpperCase() + rec.level.slice(1)}`, 60, y);
 
                 y += 6;
                 
                 const splitText = doc.splitTextToSize(rec.text, pageWidth - 30);
-                
-                // Set suggestion text to BLACK
-                doc.setTextColor(0, 0, 0); 
+                doc.setTextColor(0, 0, 0);
                 doc.text(splitText, 14, y);
                 
                 y += (splitText.length * 5) + 8;
@@ -1101,4 +1145,3 @@
     </script>
 </body>
 </html>
-```
