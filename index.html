@@ -1,6 +1,4 @@
-I will adjust the layout to use fixed, evenly distributed positions for the disorder bars to prevent any overlap. I will also add a "Username" input field in the sidebar and include it in the PDF export.
 
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -447,12 +445,62 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             height: 16px;
         }
 
+        /* Total Severity Panel */
+        .total-severity-panel {
+            position: fixed;
+            right: 24px;
+            top: 24px;
+            min-width: 180px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .total-severity-header {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .total-severity-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .total-severity-value span {
+            font-size: 16px;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        .severity-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .severity-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff6b6b);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
         /* Info Panel */
         .info-panel {
             position: fixed;
             right: 24px;
-            top: 24px;
-            width: 280px;
+            top: 130px; /* Moved down to accommodate total severity */
+            width: 180px; /* Same width as total panel for alignment */
             background: var(--card);
             backdrop-filter: blur(20px);
             border: 1px solid var(--border);
@@ -462,11 +510,13 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             opacity: 0;
             transform: translateY(-10px);
             transition: all 0.3s ease;
+            pointer-events: none;
         }
 
         .info-panel.visible {
             opacity: 1;
             transform: translateY(0);
+            pointer-events: auto;
         }
 
         .info-header {
@@ -644,9 +694,9 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 left: 300px;
             }
             
-            .info-panel {
-                width: 220px;
+            .info-panel, .total-severity-panel {
                 right: 12px;
+                width: 160px;
             }
             
             .bottom-controls {
@@ -746,13 +796,22 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
         <div class="sub-title">How Neurologically Deficient Are You</div>
     </div>
 
-    <!-- Axis Labels -->
-    <!--<div class="axis-label axis-left">
+    <!-- Axis Labels 
+    <div class="axis-label axis-left">
         <span>&larr;</span> Hyperfocus
     </div>
     <div class="axis-label axis-right">
         Compulsivity <span>&rarr;</span>
     </div>-->
+
+    <!-- Total Severity Panel -->
+    <div class="total-severity-panel" id="totalSeverityPanel">
+        <div class="total-severity-header">Total Severity</div>
+        <div class="total-severity-value"><span id="totalSeverityValue">0</span> <span>/ 600</span></div>
+        <div class="severity-bar-bg">
+            <div class="severity-bar-fill" id="severityBarFill" style="width: 0%;"></div>
+        </div>
+    </div>
 
     <!-- Info Panel -->
     <div class="info-panel" id="infoPanel">
@@ -843,8 +902,9 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
         // Get jsPDF from global scope
         const { jsPDF } = window.jspdf;
 
+        const MAX_TOTAL_SEVERITY = 600; // 6 disorders * 100 max severity
+
         // Default disorder data with fixed positions (circular layout)
-        // Positions are fixed to prevent overlap
         const defaultDisorderData = {
             adhd: {
                 name: 'ADHD',
@@ -854,7 +914,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 prevalence: 5.7,
                 hyperfocus: 85,
                 compulsivity: 35,
-                position: { x: 3.5, y: 0, z: 0 } // 0 deg
+                position: { x: 3.5, y: 0, z: 0 }
             },
             autism: {
                 name: 'Autism',
@@ -864,7 +924,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 prevalence: 2.3,
                 hyperfocus: 90,
                 compulsivity: 45,
-                position: { x: 1.75, y: 0, z: 3.03 } // 60 deg
+                position: { x: 1.75, y: 0, z: 3.03 }
             },
             ocd: {
                 name: 'OCD',
@@ -874,7 +934,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 prevalence: 1.2,
                 hyperfocus: 55,
                 compulsivity: 92,
-                position: { x: -1.75, y: 0, z: 3.03 } // 120 deg
+                position: { x: -1.75, y: 0, z: 3.03 }
             },
             schizophrenia: {
                 name: 'Schizophrenia',
@@ -884,7 +944,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 prevalence: 0.7,
                 hyperfocus: 40,
                 compulsivity: 70,
-                position: { x: -3.5, y: 0, z: 0 } // 180 deg
+                position: { x: -3.5, y: 0, z: 0 }
             },
             anxiety: {
                 name: 'Anxiety',
@@ -894,7 +954,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 prevalence: 18.1,
                 hyperfocus: 30,
                 compulsivity: 75,
-                position: { x: -1.75, y: 0, z: -3.03 } // 240 deg
+                position: { x: -1.75, y: 0, z: -3.03 }
             },
             depression: {
                 name: 'Depression',
@@ -904,7 +964,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 prevalence: 4.4,
                 hyperfocus: 25,
                 compulsivity: 50,
-                position: { x: 1.75, y: 0, z: -3.03 } // 300 deg
+                position: { x: 1.75, y: 0, z: -3.03 }
             }
         };
 
@@ -932,6 +992,20 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
         const tooltip = document.getElementById('tooltip');
         const disorderCardsContainer = document.getElementById('disorder-cards');
         const usernameInput = document.getElementById('usernameInput');
+        const totalSeverityValueEl = document.getElementById('totalSeverityValue');
+        const severityBarFillEl = document.getElementById('severityBarFill');
+
+        // Update Total Severity UI
+        function updateTotalSeverity() {
+            let total = 0;
+            Object.values(disorderData).forEach(d => {
+                total += d.severity;
+            });
+            
+            totalSeverityValueEl.textContent = total;
+            const percentage = (total / MAX_TOTAL_SEVERITY) * 100;
+            severityBarFillEl.style.width = `${percentage}%`;
+        }
 
         // Create disorder cards with sliders
         function createDisorderCards() {
@@ -983,36 +1057,30 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 disorderCardsContainer.appendChild(card);
             });
 
-            // Add slider event listeners
             document.querySelectorAll('input[type="range"]').forEach(slider => {
                 slider.addEventListener('input', handleSliderChange);
             });
         }
 
-        // Handle slider changes
         function handleSliderChange(e) {
             const disorderKey = e.target.dataset.disorder;
             const type = e.target.dataset.type;
             const value = parseInt(e.target.value);
 
-            // Update data
             disorderData[disorderKey][type] = value;
 
-            // Update display
             document.getElementById(`${type}-display-${disorderKey}`).textContent = value;
             if (type === 'severity') {
                 document.getElementById(`severity-value-${disorderKey}`).textContent = value;
-                // Only Severity affects the 3D bar height now
                 updateCubeHeight(disorderKey);
+                updateTotalSeverity();
             }
 
-            // Update info panel if this disorder is selected
             if (selectedDisorder === disorderKey) {
                 updateInfoPanel(disorderKey);
             }
         }
 
-        // Update only cube height (position is fixed)
         function updateCubeHeight(disorderKey) {
             const data = disorderData[disorderKey];
             const cube = cubes[disorderKey];
@@ -1021,7 +1089,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
 
             const targetHeight = data.severity / 20;
             
-            // Smooth animation
             const animateHeight = () => {
                 const diff = targetHeight - cube.scale.y;
                 if (Math.abs(diff) > 0.01) {
@@ -1035,11 +1102,9 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             };
             animateHeight();
 
-            // Update label position (y-axis only)
             updateLabelPosition(disorderKey, targetHeight + 0.8);
         }
 
-        // Update label position (Y only, X/Z are fixed)
         function updateLabelPosition(disorderKey, y) {
             const label = labels[disorderKey];
             if (label) {
@@ -1047,34 +1112,20 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             }
         }
 
-        // Initialize Three.js scene
         function init() {
-            // Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a0f);
 
-            // Camera
-            camera = new THREE.PerspectiveCamera(
-                60,
-                window.innerWidth / window.innerHeight,
-                0.1,
-                1000
-            );
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(8, 6, 8);
 
-            // Renderer
-            renderer = new THREE.WebGLRenderer({
-                antialias: true,
-                alpha: true,
-                preserveDrawingBuffer: true
-            });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // Controls
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
@@ -1082,42 +1133,25 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             controls.maxDistance = 20;
             controls.maxPolarAngle = Math.PI / 2.1;
 
-            // Lights
             setupLights();
-
-            // Grid
             createGrid();
-
-            // Create disorder cards first
             createDisorderCards();
-
-            // Cubes
             createDisorderCubes();
-
-            // Particles
             createParticles();
-
-            // Ground plane
             createGroundPlane();
-
-            // Event listeners
             setupEventListeners();
+            
+            // Initial calculation
+            updateTotalSeverity();
 
-            // Hide loading screen
-            setTimeout(() => {
-                loadingScreen.classList.add('hidden');
-            }, 1500);
-
-            // Start animation
+            setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
             animate();
         }
 
         function setupLights() {
-            // Ambient light
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
 
-            // Main directional light
             const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
             mainLight.position.set(10, 15, 10);
             mainLight.castShadow = true;
@@ -1131,7 +1165,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             mainLight.shadow.camera.bottom = -15;
             scene.add(mainLight);
 
-            // Accent lights
             const accentLight1 = new THREE.PointLight(0xff9f43, 0.5, 20);
             accentLight1.position.set(-8, 5, -8);
             scene.add(accentLight1);
@@ -1150,7 +1183,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
         function createDisorderCubes() {
             const geometry = new THREE.BoxGeometry(1.2, 1, 1.2);
 
-            // Create cubes at fixed positions
             Object.entries(disorderData).forEach(([key, data]) => {
                 const height = data.severity / 20;
                 
@@ -1164,19 +1196,13 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
 
                 const cube = new THREE.Mesh(geometry, material);
                 cube.scale.y = height;
-                // Use fixed position from data
                 cube.position.set(data.position.x, height / 2, data.position.z);
                 cube.castShadow = true;
                 cube.receiveShadow = true;
                 cube.userData = { key, ...data };
 
-                // Create wireframe outline
                 const wireframeGeometry = new THREE.EdgesGeometry(geometry);
-                const wireframeMaterial = new THREE.LineBasicMaterial({
-                    color: 0xffffff,
-                    transparent: true,
-                    opacity: 0.3
-                });
+                const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
                 const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
                 wireframe.scale.y = height;
                 cube.add(wireframe);
@@ -1184,7 +1210,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 scene.add(cube);
                 cubes[key] = cube;
 
-                // Create label at fixed position
                 const label = createLabel(data.name, data.position.x, height + 0.8, data.position.z, data.color);
                 labels[key] = label;
             });
@@ -1198,33 +1223,24 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
 
             context.fillStyle = 'transparent';
             context.fillRect(0, 0, canvas.width, canvas.height);
-
             context.font = 'bold 32px Space Grotesk, sans-serif';
             context.textAlign = 'center';
             context.textBaseline = 'middle';
-            
             context.shadowColor = 'rgba(0, 0, 0, 0.5)';
             context.shadowBlur = 8;
             context.shadowOffsetX = 2;
             context.shadowOffsetY = 2;
-            
-            const hexColor = '#' + color.toString(16).padStart(6, '0');
-            context.fillStyle = hexColor;
+            context.fillStyle = '#' + color.toString(16).padStart(6, '0');
             context.fillText(text, canvas.width / 2, canvas.height / 2);
 
             const texture = new THREE.CanvasTexture(canvas);
             texture.needsUpdate = true;
 
-            const spriteMaterial = new THREE.SpriteMaterial({
-                map: texture,
-                transparent: true
-            });
-
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
             const sprite = new THREE.Sprite(spriteMaterial);
             sprite.position.set(x, y, z);
             sprite.scale.set(2, 0.5, 1);
             scene.add(sprite);
-            
             return sprite;
         }
 
@@ -1234,17 +1250,10 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             const colors = new Float32Array(particleCount * 3);
             const sizes = new Float32Array(particleCount);
 
-            const colorPalette = [
-                new THREE.Color(0xff9f43),
-                new THREE.Color(0xc44dff),
-                new THREE.Color(0xff6b6b),
-                new THREE.Color(0x4ecdc4),
-                new THREE.Color(0xffe66d)
-            ];
+            const colorPalette = [new THREE.Color(0xff9f43), new THREE.Color(0xc44dff), new THREE.Color(0xff6b6b), new THREE.Color(0x4ecdc4), new THREE.Color(0xffe66d)];
 
             for (let i = 0; i < particleCount; i++) {
                 const i3 = i * 3;
-                
                 positions[i3] = (Math.random() - 0.5) * 40;
                 positions[i3 + 1] = Math.random() * 15;
                 positions[i3 + 2] = (Math.random() - 0.5) * 40;
@@ -1253,7 +1262,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 colors[i3] = color.r;
                 colors[i3 + 1] = color.g;
                 colors[i3 + 2] = color.b;
-
                 sizes[i] = Math.random() * 3 + 1;
             }
 
@@ -1262,15 +1270,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-            const material = new THREE.PointsMaterial({
-                size: 0.05,
-                vertexColors: true,
-                transparent: true,
-                opacity: 0.6,
-                blending: THREE.AdditiveBlending,
-                sizeAttenuation: true
-            });
-
+            const material = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, sizeAttenuation: true });
             const particles = new THREE.Points(geometry, material);
             particles.userData.isParticle = true;
             scene.add(particles);
@@ -1278,14 +1278,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
 
         function createGroundPlane() {
             const geometry = new THREE.PlaneGeometry(30, 30);
-            const material = new THREE.MeshStandardMaterial({
-                color: 0x0a0a12,
-                metalness: 0.8,
-                roughness: 0.2,
-                transparent: true,
-                opacity: 0.5
-            });
-
+            const material = new THREE.MeshStandardMaterial({ color: 0x0a0a12, metalness: 0.8, roughness: 0.2, transparent: true, opacity: 0.5 });
             const ground = new THREE.Mesh(geometry, material);
             ground.rotation.x = -Math.PI / 2;
             ground.position.y = -0.02;
@@ -1296,14 +1289,12 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
         function updateInfoPanel(disorderKey) {
             const data = disorderData[disorderKey];
             if (!data) return;
-
             document.getElementById('infoColor').style.background = data.cssColor;
             document.getElementById('infoTitle').textContent = data.name;
             document.getElementById('infoSeverity').textContent = data.severity;
             document.getElementById('infoPrevalence').textContent = data.prevalence + '%';
             document.getElementById('infoHyperfocus').textContent = data.hyperfocus;
             document.getElementById('infoCompulsivity').textContent = data.compulsivity;
-            
             infoPanel.classList.add('visible');
         }
 
@@ -1311,10 +1302,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('click', onCanvasClick);
-
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('collapsed');
-            });
+            sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
 
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', () => {
@@ -1347,7 +1335,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
 
             if (intersects.length > 0) {
                 const cube = intersects[0].object;
-                
                 if (hoveredCube !== cube) {
                     if (hoveredCube) hoveredCube.material.emissiveIntensity = 0.1;
                     hoveredCube = cube;
@@ -1355,52 +1342,31 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                     tooltip.textContent = cube.userData.name;
                     tooltip.classList.add('visible');
                 }
-                
                 tooltip.style.left = event.clientX + 15 + 'px';
                 tooltip.style.top = event.clientY + 15 + 'px';
                 document.body.style.cursor = 'pointer';
             } else {
-                if (hoveredCube) {
-                    hoveredCube.material.emissiveIntensity = 0.1;
-                    hoveredCube = null;
-                }
+                if (hoveredCube) { hoveredCube.material.emissiveIntensity = 0.1; hoveredCube = null; }
                 tooltip.classList.remove('visible');
                 document.body.style.cursor = 'default';
             }
         }
 
-        function onCanvasClick(event) {
+        function onCanvasClick() {
             raycaster.setFromCamera(mouse, camera);
-            const cubeArray = Object.values(cubes);
-            const intersects = raycaster.intersectObjects(cubeArray);
-
-            if (intersects.length > 0) {
-                const cube = intersects[0].object;
-                selectDisorder(cube.userData.key);
-            }
+            const intersects = raycaster.intersectObjects(Object.values(cubes));
+            if (intersects.length > 0) selectDisorder(intersects[0].object.userData.key);
         }
 
         function selectDisorder(disorderKey) {
             document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
-            
             const card = document.getElementById(`card-${disorderKey}`);
-            if (card) {
-                card.classList.add('selected');
-                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-
+            if (card) { card.classList.add('selected'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             selectedDisorder = disorderKey;
             updateInfoPanel(disorderKey);
-
             const cube = cubes[disorderKey];
             if (cube) {
-                const targetPos = {
-                    x: cube.position.x + 5,
-                    y: cube.scale.y + 4,
-                    z: cube.position.z + 5
-                };
-                animateCamera(targetPos);
-
+                animateCamera({ x: cube.position.x + 5, y: cube.scale.y + 4, z: cube.position.z + 5 });
                 cube.material.emissiveIntensity = 0.5;
                 setTimeout(() => cube.material.emissiveIntensity = 0.2, 500);
             }
@@ -1420,16 +1386,11 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             const startPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
             const duration = 1000;
             const startTime = Date.now();
-
             function updateCamera() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 const eased = 1 - Math.pow(1 - progress, 3);
-
-                camera.position.x = startPos.x + (target.x - startPos.x) * eased;
-                camera.position.y = startPos.y + (target.y - startPos.y) * eased;
-                camera.position.z = startPos.z + (target.z - startPos.z) * eased;
-
+                camera.position.set(startPos.x + (target.x - startPos.x) * eased, startPos.y + (target.y - startPos.y) * eased, startPos.z + (target.z - startPos.z) * eased);
                 if (progress < 1) requestAnimationFrame(updateCamera);
             }
             updateCamera();
@@ -1463,30 +1424,30 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             const pageHeight = doc.internal.pageSize.getHeight();
             
             const username = usernameInput.value.trim() || 'Anonymous User';
+            const totalSeverity = totalSeverityValueEl.textContent;
             
-            // Header
             doc.setFontSize(24);
             doc.setTextColor(255, 159, 67);
             doc.text('MarseyNeuroView Report', 14, 20);
             
-            // User info
             doc.setFontSize(12);
             doc.setTextColor(200, 200, 200);
             doc.text(`User: ${username}`, 14, 30);
             
-            // Date
+            doc.setFontSize(14);
+            doc.setTextColor(255, 159, 67);
+            doc.text(`Total Severity Score: ${totalSeverity} / 600`, 14, 38);
+
             doc.setFontSize(10);
             doc.setTextColor(150, 150, 150);
             const now = new Date();
-            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 36);
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 150, 30);
             
-            // Screenshot
             const imgWidth = pageWidth - 28;
             const imgHeight = (imgWidth * 9) / 16;
-            doc.addImage(imgData, 'PNG', 14, 42, imgWidth, imgHeight);
+            doc.addImage(imgData, 'PNG', 14, 45, imgWidth, imgHeight);
             
-            // Data table
-            const tableStartY = 42 + imgHeight + 10;
+            const tableStartY = 45 + imgHeight + 10;
             
             doc.setFontSize(14);
             doc.setTextColor(255, 255, 255);
@@ -1517,7 +1478,6 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
                 y += 6;
             });
             
-            // Footer
             doc.setFontSize(8);
             doc.setTextColor(80, 80, 80);
             doc.text(`Report for ${username} - MarseyNeuroView`, pageWidth / 2, pageHeight - 10, { align: 'center' });
@@ -1529,6 +1489,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
             createDisorderCards();
             Object.keys(disorderData).forEach(key => updateCubeHeight(key));
+            updateTotalSeverity();
             selectedDisorder = null;
             infoPanel.classList.remove('visible');
             document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
@@ -1549,9 +1510,7 @@ I will adjust the layout to use fixed, evenly distributed positions for the diso
             });
 
             scene.children.forEach(child => {
-                if (child.userData && child.userData.isParticle) {
-                    child.rotation.y += 0.0003;
-                }
+                if (child.userData && child.userData.isParticle) child.rotation.y += 0.0003;
             });
 
             renderer.render(scene, camera);
