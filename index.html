@@ -1,3 +1,6 @@
+I will change the font color of the suggestion text in the PDF to black to ensure it is clearly readable against the white background.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">    
     <link rel="manifest" href="site.webmanifest">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -29,11 +32,7 @@
             --depression: #5f9ea0;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Space Grotesk', sans-serif;
@@ -43,9 +42,7 @@
             min-height: 100vh;
         }
 
-        .mono {
-            font-family: 'JetBrains Mono', monospace;
-        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
 
         #canvas-container {
             position: fixed;
@@ -73,9 +70,7 @@
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .sidebar.collapsed {
-            transform: translateX(-280px);
-        }
+        .sidebar.collapsed { transform: translateX(-280px); }
 
         .sidebar-header {
             padding: 24px;
@@ -107,9 +102,7 @@
             object-fit: cover;
         }
 
-        .username-section {
-            margin-top: 16px;
-        }
+        .username-section { margin-top: 16px; }
 
         .username-input {
             width: 100%;
@@ -129,9 +122,7 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
-        .username-input::placeholder {
-            color: var(--muted);
-        }
+        .username-input::placeholder { color: var(--muted); }
 
         .menu-section {
             padding: 16px;
@@ -444,7 +435,7 @@
         <div class="sub-title">How Neurologically Deficient Are You</div>
     </div>
 
-    <!-- Axis Labels
+    <!-- Axis Labels 
     <div class="axis-label axis-left"><span>&larr;</span> Hyperfocus</div>
     <div class="axis-label axis-right">Compulsivity <span>&rarr;</span></div>-->
 
@@ -560,7 +551,7 @@
             return { level, text };
         }
 
-        // Default disorder data with fixed positions (circular layout)
+        // Default disorder data
         const defaultDisorderData = {
             adhd: { name: 'ADHD', color: 0xff6b6b, cssColor: '#ff6b6b', severity: 72, prevalence: 5.7, hyperfocus: 85, compulsivity: 35, position: { x: 3.5, y: 0, z: 0 } },
             autism: { name: 'Autism', color: 0x4ecdc4, cssColor: '#4ecdc4', severity: 65, prevalence: 2.3, hyperfocus: 90, compulsivity: 45, position: { x: 1.75, y: 0, z: 3.03 } },
@@ -1022,7 +1013,7 @@
             doc.text('MarseyNeuroView Report', 14, 20);
             
             doc.setFontSize(12);
-            doc.setTextColor(200, 200, 200);
+            doc.setTextColor(100, 100, 100); // Dark gray for user info
             doc.text(`User: ${username}`, 14, 30);
             
             doc.setFontSize(14);
@@ -1030,7 +1021,7 @@
             doc.text(`Total Severity Score: ${totalSeverity} / 600`, 14, 38);
 
             doc.setFontSize(10);
-            doc.setTextColor(150, 150, 150);
+            doc.setTextColor(100, 100, 100);
             const now = new Date();
             doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 150, 30);
             
@@ -1038,7 +1029,7 @@
             const imgHeight = (imgWidth * 9) / 16;
             doc.addImage(imgData, 'JPEG', 14, 45, imgWidth, imgHeight);
             
-            // Add new page for recommendations to ensure space
+            // Add new page for recommendations
             doc.addPage();
             
             doc.setFontSize(20);
@@ -1056,17 +1047,20 @@
                 const rec = getRecommendation(key, data.severity);
                 
                 doc.setFontSize(14);
-                doc.setTextColor(data.cssColor);
+                // Keep disorder name colored for visual association
+                doc.setTextColor(data.cssColor); 
                 doc.text(data.name, 14, y);
                 
                 doc.setFontSize(10);
-                doc.setTextColor(150, 150, 150);
+                doc.setTextColor(80, 80, 80); // Dark gray for level
                 doc.text(`Level: ${rec.level.charAt(0).toUpperCase() + rec.level.slice(1)}`, 60, y);
 
                 y += 6;
                 
                 const splitText = doc.splitTextToSize(rec.text, pageWidth - 30);
-                doc.setTextColor(230, 230, 230);
+                
+                // Set suggestion text to BLACK
+                doc.setTextColor(0, 0, 0); 
                 doc.text(splitText, 14, y);
                 
                 y += (splitText.length * 5) + 8;
