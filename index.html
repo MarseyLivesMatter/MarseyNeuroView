@@ -639,8 +639,19 @@ body.light-mode .modal-overlay {
     <script>
         const OrbitControls = THREE.OrbitControls;
 
-        const { jsPDF } = window.jspdf;
-        const MAX_TOTAL_SEVERITY = 600;
+            const { jsPDF } = window.jspdf;
+    const MAX_TOTAL_SEVERITY = 600;
+
+    function throttle(fn, delay) {
+        let last = 0;
+        return function() {
+            const now = Date.now();
+            if (now - last >= delay) {
+                last = now;
+                fn.apply(this, arguments);
+            }
+        };
+    }
 
         // Evidence-informed recommendation content.
 // These are general educational suggestions, not diagnosis or medical advice.
@@ -840,7 +851,7 @@ function getRecommendation(key, severity) {
             });
             
             document.querySelectorAll('input[type="range"]').forEach(slider => {
-                slider.addEventListener('input', handleSliderChange);
+slider.addEventListener('input', throttle(handleSliderChange, 100));
             });
         }
 
