@@ -1,3 +1,6 @@
+I will adjust the layout to use fixed, evenly distributed positions for the disorder bars to prevent any overlap. I will also add a "Username" input field in the sidebar and include it in the PDF export.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,7 +60,7 @@
             position: fixed;
             left: 0;
             top: 0;
-            width: 300px;
+            width: 320px;
             height: 100vh;
             background: linear-gradient(135deg, var(--card) 0%, rgba(10, 10, 15, 0.95) 100%);
             backdrop-filter: blur(20px);
@@ -70,7 +73,7 @@
         }
 
         .sidebar.collapsed {
-            transform: translateX(-260px);
+            transform: translateX(-280px);
         }
 
         .sidebar-header {
@@ -94,12 +97,39 @@
             justify-content: center;
             overflow: hidden;
             border: 1px solid rgba(255, 159, 67, 0.3);
+            flex-shrink: 0;
         }
 
         .logo-icon img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        .username-section {
+            margin-top: 16px;
+        }
+
+        .username-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .username-input:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .username-input::placeholder {
+            color: var(--muted);
         }
 
         .menu-section {
@@ -347,7 +377,7 @@
         }
 
         .axis-left {
-            left: 360px;
+            left: 380px;
             top: 50%;
             transform: translateY(-50%) rotate(-90deg);
             color: var(--accent);
@@ -657,6 +687,9 @@
                     <div class="text-xs text-gray-500">3D Analyzer</div>
                 </div>
             </div>
+            <div class="username-section">
+                <input type="text" id="usernameInput" class="username-input" placeholder="Enter your username..." aria-label="Username">
+            </div>
         </div>
 
         <div class="menu-section">
@@ -714,12 +747,12 @@
     </div>
 
     <!-- Axis Labels -->
-    <div class="axis-label axis-left">
+    <!--<div class="axis-label axis-left">
         <span>&larr;</span> Hyperfocus
     </div>
     <div class="axis-label axis-right">
         Compulsivity <span>&rarr;</span>
-    </div>
+    </div>-->
 
     <!-- Info Panel -->
     <div class="info-panel" id="infoPanel">
@@ -810,7 +843,8 @@
         // Get jsPDF from global scope
         const { jsPDF } = window.jspdf;
 
-        // Default disorder data (for reset)
+        // Default disorder data with fixed positions (circular layout)
+        // Positions are fixed to prevent overlap
         const defaultDisorderData = {
             adhd: {
                 name: 'ADHD',
@@ -820,7 +854,7 @@
                 prevalence: 5.7,
                 hyperfocus: 85,
                 compulsivity: 35,
-                position: { x: -3, y: 0, z: 1 }
+                position: { x: 3.5, y: 0, z: 0 } // 0 deg
             },
             autism: {
                 name: 'Autism',
@@ -830,7 +864,7 @@
                 prevalence: 2.3,
                 hyperfocus: 90,
                 compulsivity: 45,
-                position: { x: -1.5, y: 0, z: -2 }
+                position: { x: 1.75, y: 0, z: 3.03 } // 60 deg
             },
             ocd: {
                 name: 'OCD',
@@ -840,7 +874,7 @@
                 prevalence: 1.2,
                 hyperfocus: 55,
                 compulsivity: 92,
-                position: { x: 2.5, y: 0, z: 0 }
+                position: { x: -1.75, y: 0, z: 3.03 } // 120 deg
             },
             schizophrenia: {
                 name: 'Schizophrenia',
@@ -850,7 +884,7 @@
                 prevalence: 0.7,
                 hyperfocus: 40,
                 compulsivity: 70,
-                position: { x: 1, y: 0, z: 2 }
+                position: { x: -3.5, y: 0, z: 0 } // 180 deg
             },
             anxiety: {
                 name: 'Anxiety',
@@ -860,7 +894,7 @@
                 prevalence: 18.1,
                 hyperfocus: 30,
                 compulsivity: 75,
-                position: { x: 3, y: 0, z: -1.5 }
+                position: { x: -1.75, y: 0, z: -3.03 } // 240 deg
             },
             depression: {
                 name: 'Depression',
@@ -870,7 +904,7 @@
                 prevalence: 4.4,
                 hyperfocus: 25,
                 compulsivity: 50,
-                position: { x: -2, y: 0, z: -3 }
+                position: { x: 1.75, y: 0, z: -3.03 } // 300 deg
             }
         };
 
@@ -897,6 +931,7 @@
         const infoPanel = document.getElementById('infoPanel');
         const tooltip = document.getElementById('tooltip');
         const disorderCardsContainer = document.getElementById('disorder-cards');
+        const usernameInput = document.getElementById('usernameInput');
 
         // Create disorder cards with sliders
         function createDisorderCards() {
@@ -967,10 +1002,9 @@
             document.getElementById(`${type}-display-${disorderKey}`).textContent = value;
             if (type === 'severity') {
                 document.getElementById(`severity-value-${disorderKey}`).textContent = value;
+                // Only Severity affects the 3D bar height now
+                updateCubeHeight(disorderKey);
             }
-
-            // Update 3D cube
-            updateCube(disorderKey);
 
             // Update info panel if this disorder is selected
             if (selectedDisorder === disorderKey) {
@@ -978,14 +1012,13 @@
             }
         }
 
-        // Update cube based on current data
-        function updateCube(disorderKey) {
+        // Update only cube height (position is fixed)
+        function updateCubeHeight(disorderKey) {
             const data = disorderData[disorderKey];
             const cube = cubes[disorderKey];
             
             if (!cube) return;
 
-            // Animate height change
             const targetHeight = data.severity / 20;
             
             // Smooth animation
@@ -1002,35 +1035,15 @@
             };
             animateHeight();
 
-            // Update position based on hyperfocus and compulsivity
-            const newX = ((data.hyperfocus - 50) / 50) * -4;
-            const newZ = ((data.compulsivity - 50) / 50) * 4;
-            
-            // Animate position
-            const animatePosition = () => {
-                const dx = newX - cube.position.x;
-                const dz = newZ - cube.position.z;
-                
-                if (Math.abs(dx) > 0.05 || Math.abs(dz) > 0.05) {
-                    cube.position.x += dx * 0.1;
-                    cube.position.z += dz * 0.1;
-                    requestAnimationFrame(animatePosition);
-                } else {
-                    cube.position.x = newX;
-                    cube.position.z = newZ;
-                }
-            };
-            animatePosition();
-
-            // Update label position
-            updateLabelPosition(disorderKey, newX, targetHeight + 0.8, newZ);
+            // Update label position (y-axis only)
+            updateLabelPosition(disorderKey, targetHeight + 0.8);
         }
 
-        // Update label position
-        function updateLabelPosition(disorderKey, x, y, z) {
+        // Update label position (Y only, X/Z are fixed)
+        function updateLabelPosition(disorderKey, y) {
             const label = labels[disorderKey];
             if (label) {
-                label.position.set(x, y, z);
+                label.position.y = y;
             }
         }
 
@@ -1137,12 +1150,10 @@
         function createDisorderCubes() {
             const geometry = new THREE.BoxGeometry(1.2, 1, 1.2);
 
+            // Create cubes at fixed positions
             Object.entries(disorderData).forEach(([key, data]) => {
                 const height = data.severity / 20;
-                const posX = ((data.hyperfocus - 50) / 50) * -4;
-                const posZ = ((data.compulsivity - 50) / 50) * 4;
                 
-                // Create cube with gradient material
                 const material = new THREE.MeshStandardMaterial({
                     color: data.color,
                     metalness: 0.3,
@@ -1153,7 +1164,8 @@
 
                 const cube = new THREE.Mesh(geometry, material);
                 cube.scale.y = height;
-                cube.position.set(posX, height / 2, posZ);
+                // Use fixed position from data
+                cube.position.set(data.position.x, height / 2, data.position.z);
                 cube.castShadow = true;
                 cube.receiveShadow = true;
                 cube.userData = { key, ...data };
@@ -1172,8 +1184,8 @@
                 scene.add(cube);
                 cubes[key] = cube;
 
-                // Create label
-                const label = createLabel(data.name, posX, height + 0.8, posZ, data.color);
+                // Create label at fixed position
+                const label = createLabel(data.name, data.position.x, height + 0.8, data.position.z, data.color);
                 labels[key] = label;
             });
         }
@@ -1191,13 +1203,11 @@
             context.textAlign = 'center';
             context.textBaseline = 'middle';
             
-            // Text shadow
             context.shadowColor = 'rgba(0, 0, 0, 0.5)';
             context.shadowBlur = 8;
             context.shadowOffsetX = 2;
             context.shadowOffsetY = 2;
             
-            // Convert hex to rgba for fill style
             const hexColor = '#' + color.toString(16).padStart(6, '0');
             context.fillStyle = hexColor;
             context.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -1298,32 +1308,22 @@
         }
 
         function setupEventListeners() {
-            // Window resize
             window.addEventListener('resize', onWindowResize);
-
-            // Mouse move for hover effects
             window.addEventListener('mousemove', onMouseMove);
-
-            // Click on cubes
             window.addEventListener('click', onCanvasClick);
 
-            // Sidebar toggle
             sidebarToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('collapsed');
             });
 
-            // Menu items
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', () => {
                     document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
                     item.classList.add('active');
-                    
-                    const view = item.dataset.view;
-                    handleViewChange(view);
+                    handleViewChange(item.dataset.view);
                 });
             });
 
-            // Control buttons
             document.getElementById('resetView').addEventListener('click', resetView);
             document.getElementById('toggleRotation').addEventListener('click', toggleAutoRotate);
             document.getElementById('toggleGrid').addEventListener('click', toggleGridVisibility);
@@ -1341,7 +1341,6 @@
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-            // Raycasting for hover
             raycaster.setFromCamera(mouse, camera);
             const cubeArray = Object.values(cubes);
             const intersects = raycaster.intersectObjects(cubeArray);
@@ -1350,14 +1349,9 @@
                 const cube = intersects[0].object;
                 
                 if (hoveredCube !== cube) {
-                    if (hoveredCube) {
-                        hoveredCube.material.emissiveIntensity = 0.1;
-                    }
-                    
+                    if (hoveredCube) hoveredCube.material.emissiveIntensity = 0.1;
                     hoveredCube = cube;
                     cube.material.emissiveIntensity = 0.4;
-                    
-                    // Show tooltip
                     tooltip.textContent = cube.userData.name;
                     tooltip.classList.add('visible');
                 }
@@ -1382,19 +1376,13 @@
 
             if (intersects.length > 0) {
                 const cube = intersects[0].object;
-                const disorderKey = cube.userData.key;
-                
-                selectDisorder(disorderKey);
+                selectDisorder(cube.userData.key);
             }
         }
 
         function selectDisorder(disorderKey) {
-            // Remove previous selection
-            document.querySelectorAll('.disorder-card').forEach(card => {
-                card.classList.remove('selected');
-            });
+            document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
             
-            // Add selection to current
             const card = document.getElementById(`card-${disorderKey}`);
             if (card) {
                 card.classList.add('selected');
@@ -1402,11 +1390,8 @@
             }
 
             selectedDisorder = disorderKey;
-
-            // Update info panel
             updateInfoPanel(disorderKey);
 
-            // Animate camera to focus on the cube
             const cube = cubes[disorderKey];
             if (cube) {
                 const targetPos = {
@@ -1416,38 +1401,23 @@
                 };
                 animateCamera(targetPos);
 
-                // Highlight effect
                 cube.material.emissiveIntensity = 0.5;
-                setTimeout(() => {
-                    cube.material.emissiveIntensity = 0.2;
-                }, 500);
+                setTimeout(() => cube.material.emissiveIntensity = 0.2, 500);
             }
         }
 
         function handleViewChange(view) {
             let targetPosition;
-            
             switch(view) {
-                case 'top':
-                    targetPosition = { x: 0, y: 12, z: 0.1 };
-                    break;
-                case 'side':
-                    targetPosition = { x: 12, y: 4, z: 0 };
-                    break;
-                default:
-                    targetPosition = { x: 8, y: 6, z: 8 };
+                case 'top': targetPosition = { x: 0, y: 12, z: 0.1 }; break;
+                case 'side': targetPosition = { x: 12, y: 4, z: 0 }; break;
+                default: targetPosition = { x: 8, y: 6, z: 8 };
             }
-
             animateCamera(targetPosition);
         }
 
         function animateCamera(target) {
-            const startPos = {
-                x: camera.position.x,
-                y: camera.position.y,
-                z: camera.position.z
-            };
-            
+            const startPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
             const duration = 1000;
             const startTime = Date.now();
 
@@ -1460,11 +1430,8 @@
                 camera.position.y = startPos.y + (target.y - startPos.y) * eased;
                 camera.position.z = startPos.z + (target.z - startPos.z) * eased;
 
-                if (progress < 1) {
-                    requestAnimationFrame(updateCamera);
-                }
+                if (progress < 1) requestAnimationFrame(updateCamera);
             }
-
             updateCamera();
         }
 
@@ -1472,65 +1439,59 @@
             animateCamera({ x: 8, y: 6, z: 8 });
             infoPanel.classList.remove('visible');
             selectedDisorder = null;
-            document.querySelectorAll('.disorder-card').forEach(card => {
-                card.classList.remove('selected');
-            });
+            document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
         }
 
         function toggleAutoRotate() {
             autoRotate = !autoRotate;
             controls.autoRotate = autoRotate;
             controls.autoRotateSpeed = 1;
-            
-            const btn = document.getElementById('toggleRotation');
-            btn.style.background = autoRotate ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+            document.getElementById('toggleRotation').style.background = autoRotate ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
         }
 
         function toggleGridVisibility() {
             showGrid = !showGrid;
             gridHelper.visible = showGrid;
-            
-            const btn = document.getElementById('toggleGrid');
-            btn.style.background = showGrid ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+            document.getElementById('toggleGrid').style.background = showGrid ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 255, 255, 0.05)';
         }
 
-        // PDF Export Function
         function exportToPDF() {
-            // Render current scene
             renderer.render(scene, camera);
-            
-            // Get canvas image
             const imgData = renderer.domElement.toDataURL('image/png');
-            
-            // Create PDF
             const doc = new jsPDF('l', 'mm', 'a4');
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             
-            // Add title
+            const username = usernameInput.value.trim() || 'Anonymous User';
+            
+            // Header
             doc.setFontSize(24);
             doc.setTextColor(255, 159, 67);
             doc.text('MarseyNeuroView Report', 14, 20);
             
-            // Add date
+            // User info
+            doc.setFontSize(12);
+            doc.setTextColor(200, 200, 200);
+            doc.text(`User: ${username}`, 14, 30);
+            
+            // Date
             doc.setFontSize(10);
             doc.setTextColor(150, 150, 150);
             const now = new Date();
-            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 36);
             
-            // Add screenshot
+            // Screenshot
             const imgWidth = pageWidth - 28;
             const imgHeight = (imgWidth * 9) / 16;
-            doc.addImage(imgData, 'PNG', 14, 35, imgWidth, imgHeight);
+            doc.addImage(imgData, 'PNG', 14, 42, imgWidth, imgHeight);
             
-            // Add data table
-            const tableStartY = 35 + imgHeight + 10;
+            // Data table
+            const tableStartY = 42 + imgHeight + 10;
             
             doc.setFontSize(14);
             doc.setTextColor(255, 255, 255);
             doc.text('Disorder Analysis Data', 14, tableStartY);
             
-            // Table header
             let y = tableStartY + 8;
             doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
@@ -1546,7 +1507,6 @@
             
             y += 8;
             
-            // Table rows
             Object.entries(disorderData).forEach(([key, data]) => {
                 doc.setTextColor(200, 200, 200);
                 doc.text(data.name, 18, y);
@@ -1557,55 +1517,37 @@
                 y += 6;
             });
             
-            // Add footer
+            // Footer
             doc.setFontSize(8);
             doc.setTextColor(80, 80, 80);
-            doc.text('MarseyNeuroView - 3D Neurological Disorder Visualization Tool', pageWidth / 2, pageHeight - 10, { align: 'center' });
+            doc.text(`Report for ${username} - MarseyNeuroView`, pageWidth / 2, pageHeight - 10, { align: 'center' });
             
-            // Save PDF
-            doc.save('MarseyNeuroView-Report.pdf');
+            doc.save(`MarseyNeuroView-${username.replace(/\s+/g, '_')}-Report.pdf`);
         }
 
         function resetAllDisorders() {
-            // Reset data
             disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
-            
-            // Recreate cards
             createDisorderCards();
-            
-            // Update all cubes
-            Object.keys(disorderData).forEach(key => {
-                updateCube(key);
-            });
-
-            // Clear selection
+            Object.keys(disorderData).forEach(key => updateCubeHeight(key));
             selectedDisorder = null;
             infoPanel.classList.remove('visible');
-            document.querySelectorAll('.disorder-card').forEach(card => {
-                card.classList.remove('selected');
-            });
+            document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
         }
 
         function animate() {
             requestAnimationFrame(animate);
-
-            // Update controls
             controls.update();
 
-            // Animate cubes
             const time = Date.now() * 0.001;
             Object.entries(cubes).forEach(([key, cube], i) => {
-                // Subtle floating animation
                 const baseHeight = cube.scale.y;
                 cube.position.y = baseHeight / 2 + Math.sin(time + i) * 0.03;
                 
-                // Subtle scale pulse
                 const pulse = 1 + Math.sin(time * 2 + i * 0.5) * 0.01;
                 cube.scale.x = pulse;
                 cube.scale.z = pulse;
             });
 
-            // Animate particles
             scene.children.forEach(child => {
                 if (child.userData && child.userData.isParticle) {
                     child.rotation.y += 0.0003;
@@ -1615,8 +1557,8 @@
             renderer.render(scene, camera);
         }
 
-        // Initialize
         init();
     </script>
 </body>
 </html>
+```
