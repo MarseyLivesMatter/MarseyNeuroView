@@ -905,7 +905,13 @@ slider.addEventListener('input', throttle(handleSliderChange, 100));
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = '#ffffff';
                 ctx.fillText(data.severity.toString(), canvas.width / 2, canvas.height / 2);
-                sevLabel.material.map.needsUpdate = true;
+
+                // Dispose the old GPU texture before creating a new one
+                if (sevLabel.material.map) {
+                    sevLabel.material.map.dispose();
+                }
+                sevLabel.material.map = new THREE.CanvasTexture(canvas);
+                sevLabel.material.needsUpdate = true;
 
                 // Animate position alongside cube height
                 const animateLabel = () => {
@@ -937,6 +943,7 @@ slider.addEventListener('input', throttle(handleSliderChange, 100));
             controls.minDistance = 5;
             controls.maxDistance = 20;
             controls.maxPolarAngle = Math.PI / 2.1;
+            controls.addEventListener('change', () => { needsRender = true; });
 
             setupLights();
             createGrid();
@@ -950,17 +957,18 @@ slider.addEventListener('input', throttle(handleSliderChange, 100));
 
             setTimeout(() => loadingScreen.classList.add('hidden'), 1500);
             animate();
-            const savedTheme = localStorage.getItem('marseyTheme');
-
-if (savedTheme === 'light') {
-    document.body.classList.add('light-mode');
-
-    const themeLabel = document.getElementById('themeLabel');
-    if (themeLabel) themeLabel.textContent = 'Dark Mode';
-
-    if (scene) {
-        scene.background = new THREE.Color(0xf7f4ef);
+            try {
+    const savedTheme = localStorage.getItem('marseyTheme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        const themeLabel = document.getElementById('themeLabel');
+        if (themeLabel) themeLabel.textContent = 'Dark Mode';
+        if (scene) {
+            scene.background = new THREE.Color(0xf7f4ef);
+        }
     }
+} catch (e) {
+    console.warn('localStorage unavailable:', e);
 }
         }
 
@@ -1147,13 +1155,17 @@ if (savedTheme === 'light') {
                 if (e.target === recModal) closeRecModal();
             });
             const toggleThemeBtn = document.getElementById('toggleTheme');
-const themeLabel = document.getElementById('themeLabel');
+const themeLabelEl = document.getElementById('themeLabel');
 
 toggleThemeBtn.addEventListener('click', () => {
     const isLight = document.body.classList.toggle('light-mode');
 
-    themeLabel.textContent = isLight ? 'Dark Mode' : 'Light Mode';
-    localStorage.setItem('marseyTheme', isLight ? 'light' : 'dark');
+    if (themeLabelEl) themeLabelEl.textContent = isLight ? 'Dark Mode' : 'Light Mode';
+    try {
+        localStorage.setItem('marseyTheme', isLight ? 'light' : 'dark');
+    } catch (e) {
+        console.warn('localStorage unavailable:', e);
+    }
 
     if (scene) {
         scene.background = new THREE.Color(isLight ? 0xf7f4ef : 0x0a0a0f);
@@ -1388,9 +1400,15 @@ if (rec.sources && rec.sources.length) {
             document.querySelectorAll('.disorder-card').forEach(card => card.classList.remove('selected'));
         }
 
+        let needsRender = true;
+
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
+
+            // Continuous idle animation — always mark dirty
+            needsRender = true;
+
             const time = Date.now() * 0.001;
             Object.entries(cubes).forEach(([key, cube], i) => {
                 const baseHeight = cube.scale.y;
@@ -1402,7 +1420,10 @@ if (rec.sources && rec.sources.length) {
             scene.children.forEach(child => {
                 if (child.userData && child.userData.isParticle) child.rotation.y += 0.0003;
             });
-            renderer.render(scene, camera);
+            if (needsRender) {
+                renderer.render(scene, camera);
+                needsRender = false;
+            }
         }
 
 
@@ -1417,7 +1438,7 @@ if (rec.sources && rec.sources.length) {
                     { text: 'Rarely or never — I finish most things I start', score: 10 },
                     { text: 'Sometimes — I get distracted but usually recover', score: 35 },
                     { text: 'Often — I frequently leave tasks unfinished', score: 65 },
-                    { text: 'Almost always — I struggle to complete nearly everything', score: 90 }
+                    { text: 'Almost always — I struggle to complete nearly everything', score: 100 }
                 ]
             },
             {
@@ -1429,7 +1450,7 @@ if (rec.sources && rec.sources.length) {
                     { text: 'Comfortable — I enjoy lively social environments', score: 10 },
                     { text: 'Slightly tired — I need a little time to recharge afterwards', score: 35 },
                     { text: 'Overwhelmed — loud or unpredictable settings upset me', score: 65 },
-                    { text: 'Very distressed — I avoid such situations entirely', score: 90 }
+                    { text: 'Very distressed — I avoid such situations entirely', score: 100 }
                 ]
             },
             {
@@ -1441,7 +1462,7 @@ if (rec.sources && rec.sources.length) {
                     { text: 'None — I do not experience this', score: 10 },
                     { text: 'Under 30 minutes — mild and manageable', score: 35 },
                     { text: '1–3 hours — noticeable impact on my day', score: 65 },
-                    { text: 'Over 3 hours — significantly disrupts daily life', score: 90 }
+                    { text: 'Over 3 hours — significantly disrupts daily life', score: 100 }
                 ]
             },
             {
@@ -1453,7 +1474,7 @@ if (rec.sources && rec.sources.length) {
                     { text: 'Never — no unusual perceptions', score: 10 },
                     { text: 'Rarely — very brief and easily dismissed moments', score: 35 },
                     { text: 'Occasionally — they feel real and are hard to dismiss', score: 65 },
-                    { text: 'Frequently — persistent and distressing experiences', score: 90 }
+                    { text: 'Frequently — persistent and distressing experiences', score: 100 }
                 ]
             },
             {
@@ -1465,7 +1486,7 @@ if (rec.sources && rec.sources.length) {
                     { text: 'Rarely — I feel generally calm and at ease', score: 10 },
                     { text: 'Sometimes — occasional worry that passes quickly', score: 35 },
                     { text: 'Often — anxiety affects work, sleep, or relationships', score: 65 },
-                    { text: 'Constantly — I feel on edge almost every waking hour', score: 90 }
+                    { text: 'Constantly — I feel on edge almost every waking hour', score: 100 }
                 ]
             },
             {
@@ -1477,7 +1498,7 @@ if (rec.sources && rec.sources.length) {
                     { text: 'Not at all — my interest and enjoyment feel normal', score: 10 },
                     { text: 'Several days — noticeable but temporary dip in mood', score: 35 },
                     { text: 'More than half the days — persistent low mood', score: 65 },
-                    { text: 'Nearly every day — little or no enjoyment in anything', score: 90 }
+                    { text: 'Nearly every day — little or no enjoyment in anything', score: 100 }
                 ]
             }
         ];
