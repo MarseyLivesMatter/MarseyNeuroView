@@ -1401,234 +1401,182 @@ toggleThemeBtn.addEventListener('click', () => {
         }
 
         function exportToPDF() {
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
-            const pageWidth  = doc.internal.pageSize.getWidth();   // 210mm
-            const pageHeight = doc.internal.pageSize.getHeight();  // 297mm
-            const margin = 14;
-            const colW = pageWidth - margin * 2;
-            const now = new Date();
-            const username = usernameInput.value.trim() || 'Anonymous User';
-            const totalSeverity = totalSeverityValueEl.textContent;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+    const pageWidth  = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const now = new Date();
+    const username = usernameInput.value.trim() || 'Anonymous User';
+    const totalSeverity = totalSeverityValueEl.textContent;
 
-            // ── Helper: add a new page and reset y ──────────────────
-            function checkPage(neededMM) {
-                if (y + neededMM > pageHeight - 16) {
-                    // footer on current page
-                    drawFooter();
-                    doc.addPage();
-                    y = margin;
-                }
-            }
+    let y = margin;
 
-            function drawFooter() {
-                doc.setFontSize(7);
-                doc.setTextColor(160, 160, 160);
-                doc.text(
-                    `MarseyNeuroView v2.1  •  Single-Page Report  •  ${username}`,
-                    pageWidth / 2, pageHeight - 6, { align: 'center' }
-                );
-            }
-
-            let y = margin;
-
-            // ── PAGE 1: Header ───────────────────────────────────────
-            doc.setFontSize(22);
-            doc.setTextColor(255, 159, 67);
-            doc.setFont(undefined, 'bold');
-            doc.text('MarseyNeuroView Report', margin, y + 6);
-
-            doc.setFontSize(9);
-            doc.setTextColor(120, 120, 120);
-            doc.setFont(undefined, 'normal');
-            doc.text(
-                `User: ${username}  •  Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
-                margin, y + 13
-            );
-            y += 20;
-
-            // ── Thin divider ─────────────────────────────────────────
-            doc.setDrawColor(230, 230, 230);
-            doc.setLineWidth(0.3);
-            doc.line(margin, y, pageWidth - margin, y);
-            y += 6;
-
-            // ── Total Severity badge ──────────────────────────────────
-            doc.setFontSize(10);
-            doc.setTextColor(120, 120, 120);
-            doc.setFont(undefined, 'bold');
-            doc.text('TOTAL SEVERITY', margin, y);
-
-            doc.setFontSize(28);
-            doc.setTextColor(255, 159, 67);
-            doc.text(`${totalSeverity} / 600`, margin, y + 10);
-            y += 18;
-
-            // ── 3D scene capture ─────────────────────────────────────
-            doc.setDrawColor(230, 230, 230);
-            doc.setLineWidth(0.3);
-            doc.line(margin, y, pageWidth - margin, y);
-            y += 5;
-
-            doc.setFontSize(9);
-            doc.setTextColor(120, 120, 120);
-            doc.setFont(undefined, 'bold');
-            doc.text('3D VISUALIZATION', margin, y);
-            y += 4;
-
-            renderer.render(scene, camera);
-            const imgData = getCompressedDataURL(renderer.domElement, 1920, 0.75);
-            const imgW = colW;
-            const imgH = Math.round(imgW * 9 / 16);
-            doc.addImage(imgData, 'JPEG', margin, y, imgW, imgH);
-            y += imgH + 6;
-
-            // ── Severity overview bar chart ───────────────────────────
-            doc.setDrawColor(230, 230, 230);
-            doc.line(margin, y, pageWidth - margin, y);
-            y += 5;
-
-            doc.setFontSize(9);
-            doc.setTextColor(120, 120, 120);
-            doc.setFont(undefined, 'bold');
-            doc.text('Severity Overview', margin, y);
-            y += 5;
-
-            // Sort disorders highest → lowest for the overview
-            const sorted = Object.entries(disorderData).sort((a, b) => b[1].severity - a[1].severity);
-            const barMaxW = colW - 30;
-
-            sorted.forEach(([key, data]) => {
-                checkPage(7);
-                const pct = data.severity / 100;
-                const barW = Math.max(1, barMaxW * pct);
-                const labelW = 28;
-                const barX = margin + labelW;
-
-                // Label
-                doc.setFontSize(8);
-                doc.setTextColor(60, 60, 60);
-                doc.setFont(undefined, 'normal');
-                doc.text(data.name, margin, y + 3.2);
-
-                // Bar background
-                doc.setFillColor(235, 235, 235);
-                doc.roundedRect(barX, y, barMaxW, 5, 1, 1, 'F');
-
-                // Bar fill — parse hex cssColor
-                const hex = data.cssColor.replace('#', '');
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                doc.setFillColor(r, g, b);
-                doc.roundedRect(barX, y, barW, 5, 1, 1, 'F');
-
-                // Percentage label
-                doc.setFontSize(7);
-                doc.setTextColor(80, 80, 80);
-                doc.text(`${data.severity}%`, barX + barMaxW + 2, y + 3.5);
-
-                y += 7;
-            });
-
-            y += 2;
-
-            // ── PAGE 2 onwards: Recommendations ───────────────────────
+    // Helper to check if we need a new page
+    function checkPage(neededMM) {
+        if (y + neededMM > pageHeight - 16) {
             drawFooter();
             doc.addPage();
             y = margin;
-
-            doc.setFontSize(18);
-            doc.setTextColor(255, 159, 67);
-            doc.setFont(undefined, 'bold');
-            doc.text('Recommendations (All Disorders)', margin, y);
-            y += 4;
-
-            doc.setDrawColor(230, 230, 230);
-            doc.setLineWidth(0.3);
-            doc.line(margin, y, pageWidth - margin, y);
-            y += 7;
-
-            Object.entries(disorderData).forEach(([key, data]) => {
-                const rec = getRecommendation(key, data.severity);
-                const levelLabel = rec.level.charAt(0).toUpperCase() + rec.level.slice(1);
-                const levelColors = { low: [80, 160, 80], moderate: [220, 140, 40], high: [200, 60, 60] };
-                const [lr, lg, lb] = levelColors[rec.level] || [120, 120, 120];
-
-                // Estimate block height to decide page break
-                const recLines = doc.setFontSize(11) || doc.splitTextToSize(rec.text, colW - 6);
-                const recLineCount = doc.splitTextToSize(rec.text, colW - 6).length;
-                const srcLines = rec.sources && rec.sources.length
-                    ? doc.splitTextToSize(`Sources: ${rec.sources.join(', ')}`, colW - 6).length
-                    : 0;
-                const blockH = 8 + (recLineCount * 5.5) + (srcLines ? srcLines * 4.5 + 3 : 0) + 6;
-                checkPage(blockH);
-
-                // Disorder name + level badge on same line
-                const hex = data.cssColor.replace('#', '');
-                const cr = parseInt(hex.substring(0, 2), 16);
-                const cg = parseInt(hex.substring(2, 4), 16);
-                const cb = parseInt(hex.substring(4, 6), 16);
-
-                doc.setFontSize(13);
-                doc.setTextColor(cr, cg, cb);
-                doc.setFont(undefined, 'bold');
-                doc.text(`${data.name} (${data.severity}%)`, margin, y);
-
-                // Level badge
-                const nameW = doc.getTextWidth(`${data.name} (${data.severity}%) `);
-                doc.setFillColor(lr, lg, lb);
-                doc.roundedRect(margin + nameW, y - 3.5, 20, 5, 1.5, 1.5, 'F');
-                doc.setFontSize(7);
-                doc.setTextColor(255, 255, 255);
-                doc.setFont(undefined, 'bold');
-                doc.text(levelLabel.toUpperCase(), margin + nameW + 10, y - 0.5, { align: 'center' });
-
-                y += 5;
-
-                // Recommendation body text
-                doc.setFontSize(11);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont(undefined, 'normal');
-                const splitText = doc.splitTextToSize(rec.text, colW - 6);
-                doc.text(splitText, margin, y);
-                y += splitText.length * 5.5 + 2;
-
-                // Sources
-                if (rec.sources && rec.sources.length) {
-                    doc.setFontSize(8.5);
-                    doc.setTextColor(110, 110, 110);
-                    doc.setFont(undefined, 'italic');
-                    const srcText = doc.splitTextToSize(`Sources: ${rec.sources.join(', ')}`, colW - 6);
-                    doc.text(srcText, margin, y);
-                    y += srcText.length * 4.5 + 3;
-                    doc.setFont(undefined, 'normal');
-                }
-
-                // Separator between disorders
-                doc.setDrawColor(235, 235, 235);
-                doc.setLineWidth(0.2);
-                doc.line(margin, y, pageWidth - margin, y);
-                y += 6;
-            });
-
-            // ── Disclaimer ────────────────────────────────────────────
-            checkPage(14);
-            doc.setFillColor(255, 248, 235);
-            doc.roundedRect(margin, y, colW, 11, 2, 2, 'F');
-            doc.setFontSize(8.5);
-            doc.setTextColor(160, 100, 20);
-            doc.setFont(undefined, 'bold');
-            doc.text(
-                'EDUCATIONAL USE ONLY — Not a medical diagnosis. Consult a qualified clinician.',
-                pageWidth / 2, y + 7, { align: 'center' }
-            );
-            y += 14;
-
-            drawFooter();
-
-            const safeName = username.replace(/[^a-zA-Z0-9_-]/g, '_');
-            doc.save(`MarseyNeuroView-${safeName}-Report.pdf`);
         }
+    }
+
+    // Helper to draw the footer on every page
+    function drawFooter() {
+        doc.setFontSize(7);
+        doc.setTextColor(100, 100, 100); 
+        doc.text(
+            `MarseyNeuroView v2.1  •  Clinical Profile  •  ${username}`,
+            pageWidth / 2, pageHeight - 6, { align: 'center' }
+        );
+    }
+
+    // ── PAGE 1: Branded Header ──────────────────────────────────────────
+    
+    // TODO: Replace with your actual 1:1 base64 string of the Marsey head
+    const marseyHeadBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; 
+    
+    doc.addImage(marseyHeadBase64, 'PNG', margin, y, 16, 16); 
+
+    doc.setFontSize(22);
+    doc.setTextColor(255, 159, 67);
+    doc.setFont(undefined, 'bold');
+    doc.text('MarseyNeuroView Report', margin + 20, y + 6);
+
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont(undefined, 'normal');
+    doc.text(`User: ${username}  •  Generated: ${now.toLocaleDateString()}`, margin + 20, y + 12);
+    
+    y += 24;
+
+    // ── 3D Scene Capture & Total Severity ───────────────────────────────
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont(undefined, 'bold');
+    doc.text('3D VISUALIZATION & TOTAL SEVERITY', margin, y);
+    y += 4;
+
+    renderer.render(scene, camera);
+    const imgData = getCompressedDataURL(renderer.domElement, 1200, 0.8);
+    const imgW = pageWidth - margin * 2;
+    const imgH = Math.round(imgW * 9 / 16);
+    doc.addImage(imgData, 'JPEG', margin, y, imgW, imgH);
+    
+    y += imgH + 8;
+    doc.setFontSize(14);
+    doc.setTextColor(255, 159, 67);
+    doc.text(`Total Severity Score: ${totalSeverity} / 600`, margin, y);
+    y += 10;
+
+    // ── TWO-COLUMN Severity Overview ────────────────────────────────────
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 6;
+
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text('SEVERITY BREAKDOWN', margin, y);
+    y += 6;
+
+    const sorted = Object.entries(disorderData).sort((a, b) => b[1].severity - a[1].severity);
+    
+    const columnGap = 10;
+    const colW = (pageWidth - (margin * 2) - columnGap) / 2; 
+    const barMaxW = colW - 35; 
+    let startY = y;
+
+    sorted.forEach(([key, data], index) => {
+        const isLeftCol = index % 2 === 0;
+        const currentX = isLeftCol ? margin : margin + colW + columnGap;
+        const currentY = isLeftCol ? startY + (Math.floor(index / 2) * 8) : startY + (Math.floor(index / 2) * 8);
+
+        const pct = data.severity / 100;
+        const barW = Math.max(1, barMaxW * pct);
+        const labelW = 28;
+        const barX = currentX + labelW;
+
+        doc.setFontSize(8);
+        doc.setTextColor(40, 40, 40);
+        doc.text(data.name, currentX, currentY + 3.2);
+
+        doc.setFillColor(235, 235, 235);
+        doc.roundedRect(barX, currentY, barMaxW, 4, 1, 1, 'F');
+
+        const hex = data.cssColor.replace('#', '');
+        doc.setFillColor(parseInt(hex.substring(0, 2), 16), parseInt(hex.substring(2, 4), 16), parseInt(hex.substring(4, 6), 16));
+        doc.roundedRect(barX, currentY, barW, 4, 1, 1, 'F');
+
+        doc.setFontSize(7);
+        doc.setTextColor(60, 60, 60);
+        doc.text(`${data.severity}%`, barX + barMaxW + 2, currentY + 3.2);
+        
+        y = Math.max(y, currentY + 12);
+    });
+
+    // ── PAGE 2: Recommendations with Tinted Backgrounds ─────────────────
+    drawFooter();
+    doc.addPage();
+    y = margin;
+
+    doc.setFontSize(14);
+    doc.setTextColor(255, 159, 67);
+    doc.text('CLINICAL RECOMMENDATIONS', margin, y);
+    y += 8;
+
+    Object.entries(disorderData).forEach(([key, data]) => {
+        const rec = getRecommendation(key, data.severity);
+        const levelLabel = rec.level.toUpperCase();
+        
+        const bgColors = { low: [238, 249, 238], moderate: [255, 245, 230], high: [255, 235, 235] };
+        const textColors = { low: [40, 100, 40], moderate: [180, 100, 20], high: [180, 40, 40] };
+        
+        const [bgR, bgG, bgB] = bgColors[rec.level] || [240, 240, 240];
+        const [txtR, txtG, txtB] = textColors[rec.level] || [80, 80, 80];
+
+        // Format body text and sources
+        const recLines = doc.splitTextToSize(rec.text, pageWidth - (margin * 2) - 8);
+        const srcText = rec.sources.length ? `Sources: ${rec.sources.join(", ")}` : '';
+        const srcLines = srcText ? doc.splitTextToSize(srcText, pageWidth - (margin * 2) - 8) : [];
+        
+        // Calculate block height dynamically
+        let blockH = 14 + (recLines.length * 5.5);
+        if (srcLines.length > 0) blockH += (srcLines.length * 4.5) + 3;
+
+        checkPage(blockH + 5);
+
+        // Draw tinted background box
+        doc.setFillColor(bgR, bgG, bgB);
+        doc.roundedRect(margin, y, pageWidth - (margin * 2), blockH, 2, 2, 'F');
+
+        // Header inside box
+        doc.setFontSize(11);
+        doc.setTextColor(txtR, txtG, txtB);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${data.name} — ${levelLabel} (${data.severity}%)`, margin + 4, y + 6);
+
+        // Recommendation Text
+        doc.setFontSize(10);
+        doc.setTextColor(40, 40, 40); 
+        doc.setFont(undefined, 'normal');
+        doc.text(recLines, margin + 4, y + 12);
+        
+        // Sources Text
+        if (srcLines.length > 0) {
+            const srcY = y + 12 + (recLines.length * 5.5);
+            doc.setFontSize(8.5);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont(undefined, 'italic');
+            doc.text(srcLines, margin + 4, srcY);
+        }
+
+        y += blockH + 6;
+    });
+
+    drawFooter();
+    const safeName = username.replace(/[^a-zA-Z0-9_-]/g, '_');
+    doc.save(`MarseyNeuroView-${safeName}.pdf`);
+}
 
         function resetAllDisorders() {
             disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
