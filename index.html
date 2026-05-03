@@ -267,7 +267,7 @@ body.light-mode .modal-overlay {
 
         /* Total Severity Panel */
         .total-severity-panel {
-            position: fixed; right: 24px; top: 24px; min-width: 180px;
+            position: fixed; right: 24px; top: 24px; width: 200px;
             background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border);
             border-radius: 16px; padding: 20px; z-index: 100;
         }
@@ -279,19 +279,19 @@ body.light-mode .modal-overlay {
 
         /* Info Panel */
         .info-panel {
-            position: fixed; right: 24px; top: 130px; width: 180px;
+            position: fixed; right: 24px; top: 140px; width: 200px;
             background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border);
             border-radius: 16px; padding: 20px; z-index: 100; opacity: 0;
             transform: translateY(-10px); transition: all 0.3s ease; pointer-events: none;
         }
         .info-panel.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
         .info-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .info-color { width: 16px; height: 16px; border-radius: 4px; }
+        .info-color { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
         .info-title { font-size: 18px; font-weight: 600; }
-        .info-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .stat-box { background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 12px; }
-        .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
-        .stat-value { font-size: 20px; font-weight: 600; }
+        .info-stats { display: flex; flex-direction: column; gap: 8px; }
+        .stat-box { background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 10px 8px; min-width: 0; }
+        .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
+        .stat-value { font-size: 17px; font-weight: 600; }
 
         /* View Indicator */
         .view-indicator {
@@ -377,7 +377,7 @@ body.light-mode .modal-overlay {
             .sidebar { width: 280px; }
             .sidebar.collapsed { transform: translateX(-240px); }
             .title-overlay { left: 180px; }
-            .info-panel, .total-severity-panel { right: 12px; width: 160px; }
+            .info-panel, .total-severity-panel { right: 12px; width: 180px; }
             .bottom-controls { flex-wrap: wrap; max-width: 90vw; }
         }
 
@@ -594,7 +594,7 @@ body.light-mode .modal-overlay {
         </div>
         <div class="info-stats">
             <div class="stat-box"><div class="stat-label">Severity</div><div class="stat-value" id="infoSeverity">--</div></div>
-            <div class="stat-box"><div class="stat-label">Prevalence</div><div class="stat-value" id="infoPrevalence">--%</div></div>
+            <div class="stat-box"><div class="stat-label">Prevalence (Gen. Pop)</div><div class="stat-value" id="infoPrevalence">--%</div></div>
         </div>
     </div>
 
