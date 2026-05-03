@@ -783,7 +783,7 @@ function getRecommendation(key, severity) {
         let disorderData = JSON.parse(JSON.stringify(defaultDisorderData));
 
         let scene, camera, renderer, controls;
-        let cubes = {};
+        let cubes = {};        // hit-test spheres (invisible, for click detection)
         let labels = {};
         let severityLabels = {};
         let gridHelper;
@@ -793,6 +793,14 @@ function getRecommendation(key, severity) {
         let selectedDisorder = null;
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+
+        // Radar-specific
+        let radarGroup = null;   // parent Group — all radar objects go here
+        let radarMesh = null;
+        let radarOutline = null;
+        let radarRingLines = [];
+        let radarAxisLines = [];
+        let radarNodeSpheres = {};
 
         // DOM Elements
         const container = document.getElementById('canvas-container');
@@ -872,64 +880,111 @@ slider.addEventListener('input', throttle(handleSliderChange, 100));
             }
         }
 
-        function updateCubeHeight(disorderKey) {
-            const data = disorderData[disorderKey];
-            const cube = cubes[disorderKey];
-            if (!cube) return;
-            
-            const targetHeight = data.severity / 20;
-            
-            const animateHeight = () => {
-                const diff = targetHeight - cube.scale.y;
-                if (Math.abs(diff) > 0.01) {
-                    cube.scale.y += diff * 0.15;
-                    cube.position.y = cube.scale.y / 2;
-                    requestAnimationFrame(animateHeight);
-                } else {
-                    cube.scale.y = targetHeight;
-                    cube.position.y = targetHeight / 2;
-                }
-            };
-            animateHeight();
-            
-            if (labels[disorderKey]) labels[disorderKey].position.y = 5.8;
-
-            // Update severity label value and track cube mid-height for position
-            const sevLabel = severityLabels[disorderKey];
-            if (sevLabel) {
-                const canvas = sevLabel.userData.canvas;
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.font = 'bold 40px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(data.severity.toString(), canvas.width / 2, canvas.height / 2);
-
-                // Dispose the old GPU texture before creating a new one
-                if (sevLabel.material.map) {
-                    sevLabel.material.map.dispose();
-                }
-                sevLabel.material.map = new THREE.CanvasTexture(canvas);
-                sevLabel.material.needsUpdate = true;
-
-                // Animate position alongside cube height
-                const animateLabel = () => {
-                    sevLabel.position.y = cubes[disorderKey].position.y;
-                    if (Math.abs(cubes[disorderKey].scale.y - targetHeight) > 0.01) {
-                        requestAnimationFrame(animateLabel);
-                    }
-                };
-                animateLabel();
-            }
+        // ── Radar helpers ─────────────────────────────────────────────────────
+        function getRadarPoint(index, severity, radius) {
+            const N = Object.keys(disorderData).length;
+            const angle = (index / N) * Math.PI * 2 - Math.PI / 2;
+            const r = radius * (severity / 100);
+            return new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
         }
+
+        function buildRadarGeometry() {
+            const keys = Object.keys(disorderData);
+            const N = keys.length;
+            const MAX_R = 4.5;
+
+            // ── Filled polygon ───────────────────────────────────────
+            const fillPos = [], fillCol = [];
+            keys.forEach((key, i) => {
+                const next = (i + 1) % N;
+                const p0 = new THREE.Vector3(0, 0, 0);
+                const p1 = getRadarPoint(i,    disorderData[keys[i]].severity,    MAX_R);
+                const p2 = getRadarPoint(next, disorderData[keys[next]].severity, MAX_R);
+                [p0, p1, p2].forEach(p => fillPos.push(p.x, p.y, p.z));
+                const c1 = new THREE.Color(disorderData[keys[i]].color);
+                const c2 = new THREE.Color(disorderData[keys[next]].color);
+                fillCol.push(0.95, 0.62, 0.26);
+                fillCol.push(c1.r, c1.g, c1.b);
+                fillCol.push(c2.r, c2.g, c2.b);
+            });
+
+            if (!radarMesh) {
+                // First build — create mesh and add to radarGroup once
+                const fillGeo = new THREE.BufferGeometry();
+                fillGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(fillPos), 3));
+                fillGeo.setAttribute('color',    new THREE.BufferAttribute(new Float32Array(fillCol), 3));
+                radarMesh = new THREE.Mesh(fillGeo, new THREE.MeshBasicMaterial({
+                    vertexColors: true, transparent: true, opacity: 0.22,
+                    side: THREE.DoubleSide, depthWrite: false
+                }));
+                radarGroup.add(radarMesh);
+            } else {
+                // Subsequent updates — mutate buffer data in place, no remove/re-add
+                const posAttr = radarMesh.geometry.getAttribute('position');
+                const colAttr = radarMesh.geometry.getAttribute('color');
+                for (let i = 0; i < fillPos.length; i++) posAttr.array[i] = fillPos[i];
+                for (let i = 0; i < fillCol.length; i++) colAttr.array[i] = fillCol[i];
+                posAttr.needsUpdate = true;
+                colAttr.needsUpdate = true;
+            }
+
+            // ── Outline loop ─────────────────────────────────────────
+            const outPts = keys.map((key, i) => getRadarPoint(i, disorderData[key].severity, MAX_R));
+            outPts.push(outPts[0].clone());
+
+            if (!radarOutline) {
+                radarOutline = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(outPts),
+                    new THREE.LineBasicMaterial({ color: 0xff9f43, transparent: true, opacity: 0.9 })
+                );
+                radarGroup.add(radarOutline);
+            } else {
+                const outAttr = radarOutline.geometry.getAttribute('position');
+                outPts.forEach((p, i) => { outAttr.setXYZ(i, p.x, p.y, p.z); });
+                outAttr.needsUpdate = true;
+            }
+
+            // ── Sync hit-spheres, node spheres, severity labels ───────
+            keys.forEach((key, i) => {
+                const p = getRadarPoint(i, disorderData[key].severity, MAX_R);
+
+                if (cubes[key]) cubes[key].position.copy(p);
+
+                if (radarNodeSpheres[key]) {
+                    radarNodeSpheres[key].position.copy(p);
+                    radarNodeSpheres[key].material.color.set(disorderData[key].color);
+                    radarNodeSpheres[key].material.emissive.set(disorderData[key].color);
+                }
+
+                const sevLabel = severityLabels[key];
+                if (sevLabel) {
+                    const canvas = sevLabel.userData.canvas;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.font = 'bold 40px Arial, sans-serif';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(disorderData[key].severity.toString(), canvas.width / 2, canvas.height / 2);
+                    if (sevLabel.material.map) sevLabel.material.map.dispose();
+                    sevLabel.material.map = new THREE.CanvasTexture(canvas);
+                    sevLabel.material.needsUpdate = true;
+                    sevLabel.position.set(p.x * 1.2, 0.55, p.z * 1.2);
+                }
+            });
+
+            needsRender = true;
+        }
+
+        function updateCubeHeight(key) { buildRadarGeometry(); }
 
 
         function init() {
             scene = new THREE.Scene();
+            radarGroup = new THREE.Group();
+            scene.add(radarGroup);
             // transparent background so HTML layers show through
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(8, 6, 8);
+            camera.position.set(0, 9, 7);  // angled top-down for radar
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -940,9 +995,9 @@ slider.addEventListener('input', throttle(handleSliderChange, 100));
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.minDistance = 5;
-            controls.maxDistance = 20;
-            controls.maxPolarAngle = Math.PI / 2.1;
+            controls.minDistance = 4;
+            controls.maxDistance = 18;
+            controls.maxPolarAngle = Math.PI / 1.8;
             controls.addEventListener('change', () => { needsRender = true; });
 
             setupLights();
@@ -997,78 +1052,116 @@ slider.addEventListener('input', throttle(handleSliderChange, 100));
         }
 
         function createGrid() {
-            gridHelper = new THREE.GridHelper(20, 20, 0xff9f43, 0x1a1a2e);
-            gridHelper.position.y = -0.01;
+            gridHelper = new THREE.GridHelper(12, 12, 0x1a2233, 0x0f1520);
+            gridHelper.position.y = -0.4;
+            gridHelper.material.opacity = 0.25;
+            gridHelper.material.transparent = true;
             scene.add(gridHelper);
         }
 
         function createDisorderCubes() {
-            const geometry = new THREE.BoxGeometry(1.2, 1, 1.2);
-            Object.entries(disorderData).forEach(([key, data]) => {
-                const height = data.severity / 20;
-                const material = new THREE.MeshStandardMaterial({ color: data.color, metalness: 0.3, roughness: 0.4, emissive: data.color, emissiveIntensity: 0.1 });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.scale.y = height;
-                cube.position.set(data.position.x, height / 2, data.position.z);
-                cube.castShadow = true;
-                cube.receiveShadow = true;
-                cube.userData = { key, ...data };
+            // For the radar view, 'cubes' are invisible hit-spheres for raycasting,
+            // and radarNodeSpheres are the visible glowing dots at each vertex.
+            const keys = Object.keys(disorderData);
+            const MAX_R = 4.5;
+            keys.forEach((key, i) => {
+                const data = disorderData[key];
+                const p = getRadarPoint(i, data.severity, MAX_R);
 
-                scene.add(cube);
-                cubes[key] = cube;
+                // Invisible hit sphere (raycaster target)
+                const hitGeo = new THREE.SphereGeometry(0.35, 8, 8);
+                const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+                const hit = new THREE.Mesh(hitGeo, hitMat);
+                hit.position.copy(p);
+                hit.userData = { key, ...data };
+                radarGroup.add(hit);
+                cubes[key] = hit;
 
-                const label = createLabel(data.name, data.position.x, 5.8, data.position.z, data.color);
-                labels[key] = label;
+                // Visible glowing node sphere
+                const nodeMat = new THREE.MeshStandardMaterial({
+                    color: data.color, emissive: data.color,
+                    emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.3
+                });
+                const node = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), nodeMat);
+                node.position.copy(p);
+                radarGroup.add(node);
+                radarNodeSpheres[key] = node;
 
-                const sevLabel = createSeverityLabel(data.severity, data.position.x + 0.95, cube.scale.y / 2, data.position.z);
-                severityLabels[key] = sevLabel;
+                // Name label
+                const nameLbl = createLabel(data.name, p.x * 1.38, 0.05, p.z * 1.38, data.color);
+                labels[key] = nameLbl;
+
+                // Severity value label
+                const sevLbl = createSeverityLabel(data.severity, p.x * 1.2, 0.55, p.z * 1.2);
+                severityLabels[key] = sevLbl;
             });
-        }
 
+            // Draw concentric ring guides (5 rings at 20/40/60/80/100%)
+            const ringCount = 5;
+            for (let r = 1; r <= ringCount; r++) {
+                const rad = MAX_R * (r / ringCount);
+                const pts = [];
+                for (let s = 0; s <= 64; s++) {
+                    const a = (s / 64) * Math.PI * 2;
+                    pts.push(new THREE.Vector3(Math.cos(a) * rad, 0, Math.sin(a) * rad));
+                }
+                const ring = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(pts),
+                    new THREE.LineBasicMaterial({ color: 0x334455, transparent: true, opacity: 0.35 })
+                );
+                radarGroup.add(ring);
+                radarRingLines.push(ring);
+            }
+
+            // Draw axis spokes
+            keys.forEach((key, i) => {
+                const end = getRadarPoint(i, 100, MAX_R);
+                const axis = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), end]),
+                    new THREE.LineBasicMaterial({ color: 0x334455, transparent: true, opacity: 0.35 })
+                );
+                radarGroup.add(axis);
+                radarAxisLines.push(axis);
+            });
+
+            // Build the initial filled polygon
+            buildRadarGeometry();
+        }
 
         function createLabel(text, x, y, z, color) {
             const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 256;
-            canvas.height = 64;
-            context.fillStyle = 'transparent';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.font = 'bold 32px Space Grotesk, sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            context.shadowBlur = 8;
-            context.shadowOffsetX = 2;
-            context.shadowOffsetY = 2;
-            context.fillStyle = '#' + color.toString(16).padStart(6, '0');
-            context.fillText(text, canvas.width / 2, canvas.height / 2);
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'bold 28px Arial, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 6;
+            const hexColor = typeof color === 'number'
+                ? '#' + color.toString(16).padStart(6, '0')
+                : color;
+            ctx.fillStyle = hexColor;
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
             const texture = new THREE.CanvasTexture(canvas);
-            texture.needsUpdate = true;
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
-            const sprite = new THREE.Sprite(spriteMaterial);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
             sprite.position.set(x, y, z);
-            sprite.scale.set(2, 0.5, 1);
-            scene.add(sprite);
+            sprite.scale.set(1.9, 0.48, 1);
+            radarGroup.add(sprite);
             return sprite;
         }
 
         function createSeverityLabel(value, x, y, z) {
             const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 64;
-            const context = canvas.getContext('2d');
-            context.font = 'bold 40px Arial, sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillStyle = '#ffffff';
-            context.fillText(value.toString(), canvas.width / 2, canvas.height / 2);
+            canvas.width = 128; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'bold 38px Arial, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.82)';
+            ctx.fillText(value.toString(), canvas.width / 2, canvas.height / 2);
             const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
-            const sprite = new THREE.Sprite(spriteMaterial);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
             sprite.position.set(x, y, z);
-            sprite.scale.set(0.9, 0.45, 1);
+            sprite.scale.set(0.85, 0.42, 1);
             sprite.userData.canvas = canvas;
-            scene.add(sprite);
+            radarGroup.add(sprite);
             return sprite;
         }
 
@@ -1552,21 +1645,32 @@ toggleThemeBtn.addEventListener('click', () => {
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-
-            // Continuous idle animation — always mark dirty
             needsRender = true;
 
             const time = Date.now() * 0.001;
-            Object.entries(cubes).forEach(([key, cube], i) => {
-                const baseHeight = cube.scale.y;
-                cube.position.y = baseHeight / 2 + Math.sin(time + i) * 0.03;
-                const pulse = 1 + Math.sin(time * 2 + i * 0.5) * 0.01;
-                cube.scale.x = pulse;
-                cube.scale.z = pulse;
+
+            // Pulse the radar outline opacity
+            if (radarOutline) {
+                radarOutline.material.opacity = 0.7 + Math.sin(time * 1.4) * 0.2;
+            }
+
+            // Pulse each node sphere's emissive intensity
+            Object.entries(radarNodeSpheres).forEach(([key, node], i) => {
+                if (node) {
+                    node.material.emissiveIntensity = 0.4 + Math.sin(time * 1.2 + i * 1.05) * 0.3;
+                    const s = 1 + Math.sin(time * 1.8 + i * 0.9) * 0.06;
+                    node.scale.set(s, s, s);
+                }
             });
+
+            // Slowly rotate the entire radar group
+            if (radarGroup) radarGroup.rotation.y = time * 0.06;
+
+            // Rotate particle cloud
             scene.children.forEach(child => {
                 if (child.userData && child.userData.isParticle) child.rotation.y += 0.0003;
             });
+
             if (needsRender) {
                 renderer.render(scene, camera);
                 needsRender = false;
