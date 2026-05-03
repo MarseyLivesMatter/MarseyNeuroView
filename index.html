@@ -76,7 +76,7 @@ body.light-mode .modal-overlay {
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
+            z-index: 1;
         }
 
         /* Sidebar */
@@ -364,7 +364,7 @@ body.light-mode .modal-overlay {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 1;
+            z-index: 5;
             pointer-events: none;
             opacity: 1;
         }
@@ -1636,8 +1636,8 @@ toggleThemeBtn.addEventListener('click', () => {
                 options: [
                     { text: 'Rarely or never — I finish most things I start', score: 10 },
                     { text: 'Sometimes — I get distracted but usually recover', score: 35 },
-                    { text: 'Often — I frequently leave tasks unfinished', score: 65 },
-                    { text: 'Almost always — I struggle to complete nearly everything', score: 90 }
+                    { text: 'Often — I frequently leave tasks unfinished', score: 70 },
+                    { text: 'Almost always — I struggle to complete nearly everything', score: 100 }
                 ]
             },
             {
@@ -1648,8 +1648,8 @@ toggleThemeBtn.addEventListener('click', () => {
                 options: [
                     { text: 'Comfortable — I enjoy lively social environments', score: 10 },
                     { text: 'Slightly tired — I need a little time to recharge afterwards', score: 35 },
-                    { text: 'Overwhelmed — loud or unpredictable settings upset me', score: 65 },
-                    { text: 'Very distressed — I avoid such situations entirely', score: 90 }
+                    { text: 'Overwhelmed — loud or unpredictable settings upset me', score: 70 },
+                    { text: 'Very distressed — I avoid such situations entirely', score: 100 }
                 ]
             },
             {
@@ -1660,8 +1660,8 @@ toggleThemeBtn.addEventListener('click', () => {
                 options: [
                     { text: 'None — I do not experience this', score: 10 },
                     { text: 'Under 30 minutes — mild and manageable', score: 35 },
-                    { text: '1–3 hours — noticeable impact on my day', score: 65 },
-                    { text: 'Over 3 hours — significantly disrupts daily life', score: 90 }
+                    { text: '1–3 hours — noticeable impact on my day', score: 70 },
+                    { text: 'Over 3 hours — significantly disrupts daily life', score: 100 }
                 ]
             },
             {
@@ -1672,8 +1672,8 @@ toggleThemeBtn.addEventListener('click', () => {
                 options: [
                     { text: 'Never — no unusual perceptions', score: 10 },
                     { text: 'Rarely — very brief and easily dismissed moments', score: 35 },
-                    { text: 'Occasionally — they feel real and are hard to dismiss', score: 65 },
-                    { text: 'Frequently — persistent and distressing experiences', score: 90 }
+                    { text: 'Occasionally — they feel real and are hard to dismiss', score: 70 },
+                    { text: 'Frequently — persistent and distressing experiences', score: 100 }
                 ]
             },
             {
@@ -1684,8 +1684,8 @@ toggleThemeBtn.addEventListener('click', () => {
                 options: [
                     { text: 'Rarely — I feel generally calm and at ease', score: 10 },
                     { text: 'Sometimes — occasional worry that passes quickly', score: 35 },
-                    { text: 'Often — anxiety affects work, sleep, or relationships', score: 65 },
-                    { text: 'Constantly — I feel on edge almost every waking hour', score: 90 }
+                    { text: 'Often — anxiety affects work, sleep, or relationships', score: 70 },
+                    { text: 'Constantly — I feel on edge almost every waking hour', score: 100 }
                 ]
             },
             {
@@ -1696,8 +1696,8 @@ toggleThemeBtn.addEventListener('click', () => {
                 options: [
                     { text: 'Not at all — my interest and enjoyment feel normal', score: 10 },
                     { text: 'Several days — noticeable but temporary dip in mood', score: 35 },
-                    { text: 'More than half the days — persistent low mood', score: 65 },
-                    { text: 'Nearly every day — little or no enjoyment in anything', score: 90 }
+                    { text: 'More than half the days — persistent low mood', score: 70 },
+                    { text: 'Nearly every day — little or no enjoyment in anything', score: 100 }
                 ]
             }
         ];
